@@ -64,7 +64,7 @@ python run_analysis.py
 
 | 그림 | 설명 |
 |---|---|
-| ![피크 검출 20초 예시](assets/peak_detection_example_20s.png) | 20초 구간에서 착지 충격 피크가 안정적으로 1보 1피크로 검출되는 예시 (P04 / Control / shank) |
+| ![피크 검출 20초 예시](assets/peak_detection_example_20s.png) | 원본 피크 예시 (P04 / Control / shank) |
 | ![이중 피크 방지 + IQR 필터](assets/preprocessing_peak_detection.png) | 0-5초 확대: 회색=원신호, 검정=15Hz 스무딩, 파란 점=최종 피크, 주황 원=IQR로 걸러진 후보 — 스무딩과 280ms 최소 간격이 없으면 착지 후 잔진동이 별도 걸음으로 오검출됨 |
 | ![IQR 필터 개념](assets/iqr_filter_explanation.png) | 후보 피크 높이 분포에서 Q1-1.5×IQR ~ Q3+1.5×IQR 범위를 벗어난 값(노란 점)만 이상치로 제외하는 구조 |
 
