@@ -91,7 +91,7 @@ python run_analysis.py
 
 **해석의 핵심은 "메트로놈이 효과가 없었다"가 아니라, IMU 기반 shock proxy가 실제 지면반력과 동일하지 않다는 점입니다.** 케이던스가 오르면서 오히려 shank 가속도가 커진 것은 지면 충격 증가가 아니라 *leg/vertical stiffness 변화에 따른 가속도 반응 증가*로 해석하는 편이 선행 러닝역학 문헌과 더 일치합니다. IMU 가속도는 지면반력의 근사치(proxy)일 뿐 직접 측정값이 아니라는 점이 이 프로젝트에서 얻은 가장 중요한 방법론적 교훈입니다.
 
-## 4. 만났던 문제와 해결 (Engineering & Research Notes)
+## 4. 문제와 해결 
 
 이 프로젝트에서 실제로 부딪혔던 기술적/방법론적 문제와 대응입니다.
 
@@ -102,8 +102,6 @@ python run_analysis.py
 - **피험자 1명의 이상치(outlier) 조건** — 한 피험자의 Tape+Metro 조건에서 발목 각도가 다른 조건·피험자 대비 물리적으로 설명되지 않는 값으로 튐(센서 미세 이탈 가능성). → 해당 셀만 결측 처리하고 그 사실을 코드 주석에 명시(조용히 평균에 섞지 않음).
 
 - **공유 컬럼을 서로 다른 센서처럼 오독할 위험** — CSV의 `shank_free_acceleration_*` 컬럼은 shank IMU 하나에서만 측정되고 foot/hip row에는 가장 가까운 시각의 값이 그대로 복사(broadcast)됨. 이를 모르고 보면 "발·무릎·골반 3곳의 독립적인 충격 측정"처럼 보일 수 있음. → `pipeline.py` 상단에 이 broadcast 구조를 명시하고, "같은 shank 신호를 서로 다른 시점에서 읽은 것"으로 해석 범위를 한정.
-
-- **인코딩 손상** — 작업 기록 파일이 UTF-16 LE와 UTF-8이 섞여 한글이 깨짐. → UTF-8로 재저장하며 원문 복원.
 
 - **소표본(N=6) 통계에서 유의성에 매몰될 위험** — 양측 Wilcoxon 최소 p값이 0.031이라 6명 전원이 같은 방향으로 반응해야만 유의해짐. → p-value 단독 보고를 지양하고 **Cohen's d, 변화율(%), 개인별 스파게티 플롯**을 항상 함께 제시해 "유의하지 않음 = 효과 없음"으로 오독되지 않게 구성.
 
@@ -129,7 +127,4 @@ tetoronome-portfolio/
 └── Research_object.md, Agent_handoff/01_analysis.md   # 가설 정의 및 작업 이력
 ```
 
-## 6. 재현 시 참고
 
-- `data/`, `results/`는 git에 폴더만 있고 내용은 제외되어 있습니다. `data/`를 원본 CSV로 채운 뒤 `python analysis/run_analysis.py`를 실행하면 `results/`가 그대로 재생성됩니다.
-- `data/`는 원시 CSV 특성상 용량이 큽니다(총 ~430MB). GitHub에 원본까지 올릴 계획이면 Git LFS 사용을 권장합니다.
