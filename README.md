@@ -2,13 +2,11 @@
 
 3개의 IMU(발/정강이/골반)를 신체에 부착하고 러닝 중 **메트로놈(케이던스 유도)** 과 **발목 테이핑** 개입이 충격량, 관절 운동학, 보행 안정성에 미치는 효과를 검증한 N=6 파일럿 연구입니다. 데이터수집 → 원시 IMU CSV → 지표 산출 → 통계 검정 → 시각화까지 전체 분석 파이프라인을 Python으로 직접 구현했습니다.
 
-> 이 저장소는 실제 연구 저장소를 포트폴리오용으로 정리한 사본입니다. 참가자 식별정보는 P01~P06으로 익명화했고, 반복 작업 기록(analysis 하위 날짜 폴더)은 `analysis/archive/`로 모아두었습니다.
-
 ## 1. 연구 설계
 
 | 항목 | 내용 |
 |---|---|
-| 피험자 | 6명 (건강한 성인, 개인별 고정 러닝 속도 13~16km/h 트레드밀) |
+| 피험자 | 6명, P01–P06 (건강한 성인, 개인별 고정 러닝 속도 13~16km/h 트레드밀) |
 | 조건 (Within-subject) | Control / Metro / Tape / Tape+Metro (피험자별 무작위 순서) |
 | 센서 | Xsens 계열 IMU 3개 — `foot`(발), `shank`(정강이), `hip`(골반), 공통 샘플링레이트 60Hz |
 | 측정 항목 | shank 3축 자유가속도(+resultant), 각 부위 quaternion 기반 자세각 |
@@ -89,19 +87,17 @@ python run_analysis.py
 | ![Step CV% 개인 추이](assets/spaghetti_step_cv.png) | Tape에서 낮았던 Step CV%가 Tape+Metro에서 다시 오르는 패턴이 대부분 피험자에서 반복 |
 | ![Shank Peak g 개인 추이](assets/spaghetti_shank_peak_g.png) | 케이던스가 오른 피험자일수록 오히려 충격 피크(g)도 함께 오르는 경향 — 아래 해석의 근거 |
 
-**해석의 핵심은 "메트로놈이 효과가 없었다"가 아니라, IMU 기반 shock proxy가 실제 지면반력과 동일하지 않다는 점입니다.** 선행 force-plate 연구는 self-selected cadence를 5~10% 올리면 step length·braking impulse·impact transient가 오히려 줄어든다고 보고합니다 [1]. 본 연구의 shank 가속도 결과가 이와 반대로 움직인 것은, cadence 증가가 지면 충격 자체를 늘렸다기보다 *발목·종아리 근육의 반응 변화*를 가속도계가 함께 포착했기 때문으로 해석하는 편이 문헌과 더 일치합니다 — cadence +10% 조건에서 medial gastrocnemius 활성이 증가하고 [5], peak ankle dorsiflexion이 줄며 [6], stride rate가 오를수록 착지 시 발목이 더 plantarflexed된 자세를 취한다는 보고들입니다 [7].
+**해석**
 
-보폭 일관성(Step CV%)이 메트로놈 조건에서 가설과 반대로 나빠진 것도 개별 이상치라기보다 문헌과 방향이 일치하는 패턴입니다. 메트로놈은 걸음 간격의 변동계수를 실제로 줄이지 못하며 [8], 오히려 고령자 보행에서는 메트로놈 피드백이 stride time 변동성을 유의하게 늘렸다는 보고가 있고 [9], 걷기와 달리 러닝에서는 박자 동기화 자체가 덜 이뤄지는 경향이 있으며 [10], 외부 박자에 맞추려는 시도가 오히려 목표값 주변에서 과잉보정(overcorrection)에 의한 진동을 만드는 "anti-persistent" 패턴으로 이어진다는 설명도 있습니다 [11]. 즉 메트로놈이 케이던스를 끌어올리는 데는 성공했지만(유의미한 결과), 그 과정 자체가 보폭을 더 일정하게 만드는 방향으로 작동하지 않았다고 보는 것이 결과에 더 부합합니다.
+- 메트로놈 효과가 없었다기보다, IMU 기반 shock proxy가 실제 지면반력과 다르게 반응한 결과에 가까움. Force-plate 연구에서는 cadence를 5~10% 올리면 step length·braking impulse·impact transient가 줄어든다고 보고하지만 [1], 본 연구의 shank 가속도는 반대로 상승.
+- 가능한 설명: cadence 증가 시 medial gastrocnemius 활성 증가 [5], peak ankle dorsiflexion 감소 [6], 착지 시 발목이 더 plantarflexed된 자세를 취한다는 보고 [7] — 지면 충격 자체보다 발목·종아리 근육의 반응 변화를 가속도계가 함께 잡아냈을 가능성.
+- 메트로놈 조건에서 Step CV%가 악화된 것도 같은 맥락: 메트로놈은 걸음 간격 변동계수를 실제로 줄이지 못하고 [8], 고령자 보행에서도 stride time 변동성을 오히려 늘린다는 보고가 있으며 [9], 걷기보다 러닝에서 박자 동기화가 덜 이뤄지고 [10], 외부 박자를 따라가려는 시도가 과잉보정(overcorrection)에 의한 진동("anti-persistent" 패턴)을 만든다는 설명도 있음 [11]. 케이던스는 끌어올렸지만(유의미한 결과) 보폭을 더 일정하게 만드는 방향으로는 작동하지 않은 셈.
+- 테이핑 조건의 족저굴곡·보폭 일관성 개선 방향은 발목 키네시오 테이핑이 peak torque·power와 고유수용성 감각을 함께 향상시킨다는 보고들과 일치 [12][13].
+- IMU 가속도는 지면반력의 근사치(proxy)이지 직접 측정값은 아님 — 이번 분석에서 가장 크게 확인된 지점.
 
-테이핑 조건의 족저굴곡 증가·보폭 일관성 개선 방향은 발목 키네시오 테이핑이 peak torque·power와 고유수용성 감각(proprioception)을 함께 향상시킨다는 보고들과 방향이 일치합니다 [12][13].
+## 4. 문제와 해결
 
-IMU 가속도는 지면반력의 근사치(proxy)일 뿐 직접 측정값이 아니라는 점이 이 프로젝트에서 얻은 가장 중요한 방법론적 교훈입니다.
-
-## 4. 문제와 해결 
-
-이 프로젝트에서 실제로 부딪혔던 기술적/방법론적 문제와 대응입니다.
-
-- **이중 피크(double-counting) 문제** — 정강이 가속도 신호에 착지 충격 뒤 잔진동이 남아 `find_peaks`가 한 걸음을 두 걸음으로 셈. → 15Hz Butterworth로 스무딩하고, height 대신 **고정 prominence(0.2g)** + **최소 간격 280ms**를 함께 걸어 해결. (개인마다 절대 충격량이 달라 height 기준은 오탐이 많았음) 위 전처리 그림의 회색(원신호) vs 검정(스무딩) 선에서 잔진동이 사라지는 것을 직접 확인할 수 있습니다.
+- **이중 피크(double-counting) 문제** — 정강이 가속도 신호에 착지 충격 뒤 잔진동이 남아 `find_peaks`가 한 걸음을 두 걸음으로 셈. → 15Hz Butterworth로 스무딩하고, height 대신 **고정 prominence(0.2g)** + **최소 간격 280ms**를 함께 걸어 해결 (개인마다 절대 충격량이 달라 height 기준은 오탐이 많았음).
 
 - **단일 IMU로 양발 케이던스를 못 잡는 문제** — 편측(unilateral) 센서라 자동 검출 케이던스가 실측치와 어긋남. → 실험 중 스톱워치로 직접 잰 케이던스를 확보해 자동 검출값을 대체하는 수동 보정 테이블(`MANUAL_CADENCE`)을 파이프라인에 내장. 자동 검출은 걸음 간격 기반 지표(CV%, 보폭 일관성)에만 사용.
 
@@ -134,8 +130,6 @@ tetoronome-portfolio/
 ```
 
 ## 6. 참고문헌
-
-본문의 [n] 인용은 최종 보고서(`보고용 figure/스포츠과학 보고서.docx`)에 실제로 인용된 문헌 중 이 README의 주장과 대응되는 것만 추려 옮긴 것입니다.
 
 1. Heiderscheit, B. C., Chumanov, E. S., Michalski, M. P., Wille, C. M., & Ryan, M. B. (2011). Effects of step rate manipulation on joint mechanics during running. *Medicine & Science in Sports & Exercise*, 43(2), 296–302. https://doi.org/10.1249/MSS.0b013e3181ebedf4
 2. Bartík, P., & Šagát, P. (2022). Positive effect of kinesiotape on 1 km run performance in university-level males: A cross-sectional study. *Journal of Functional Morphology and Kinesiology*, 7(2), 32. https://doi.org/10.3390/jfmk7020032
