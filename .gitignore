@@ -14,3 +14,12 @@ __pycache__/
 # --- OS ---
 .DS_Store
 Thumbs.db
+
+# --- 자체완결형 README로 대체된 구 산출물 (참가자 실명 포함 히스토리 스냅샷 등) ---
+analysis/archive/
+analysis/results_report.html
+analysis/pipeline_summary.html
+analysis/citation_verification_report.html
+analysis/citation_correction_report.html
+analysis/pipeline_presentation_qna.html
+notebooks/

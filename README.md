@@ -122,10 +122,8 @@ tetoronome-portfolio/
 │   ├── pipeline.py            # 지표 계산 (피크 검출, 충격량, 케이던스, 관절/골반 kinematics, 통계)
 │   ├── run_analysis.py        # 전체 파이프라인 실행 진입점
 │   ├── visualize.py           # results/figures/ 생성
-│   ├── add_table.py, plot_change_rates.py
-│   └── archive/                # 리포트 개정 과정의 중간 산출물 (날짜별 스냅샷)
+│   └── add_table.py, plot_change_rates.py
 ├── literature_pack/            # 결과 해석을 뒷받침/반박하는 문헌 감사 자료 (인용 검증 기록 포함)
-├── notebooks/                  # EDA 및 원시 데이터 시각화 노트북
 ├── results/                    # metrics_by_condition.csv 등 + figures/ — 폴더만 유지, 내용은 git에서 제외 (run_analysis.py로 재생성)
 ├── 보고용 figure/               # 실험설계·부착·테이핑 사진 및 최종 보고서 PDF
 └── Research_object.md, Agent_handoff/01_analysis.md   # 가설 정의 및 작업 이력
@@ -135,4 +133,3 @@ tetoronome-portfolio/
 
 - `data/`, `results/`는 git에 폴더만 있고 내용은 제외되어 있습니다. `data/`를 원본 CSV로 채운 뒤 `python analysis/run_analysis.py`를 실행하면 `results/`가 그대로 재생성됩니다.
 - `data/`는 원시 CSV 특성상 용량이 큽니다(총 ~430MB). GitHub에 원본까지 올릴 계획이면 Git LFS 사용을 권장합니다.
-- `analysis/archive/`에는 리포트를 여러 차례 다시 쓰며 남긴 중간 버전(문헌 재검증, 그림 재작성 등)이 날짜별로 들어 있습니다.
