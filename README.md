@@ -59,7 +59,7 @@ python run_analysis.py
 | 저역통과 필터 | 4차 Butterworth, cutoff 15Hz | 보행 신호 주성분은 보존하면서 STA(soft tissue artifact)·부착 노이즈 억제 |
 | 충격 피크 검출 | `scipy.find_peaks`, 고정 prominence 0.2g, 최소 간격 280ms | 개인별 절대 충격량 차이를 흡수하기 위해 height 대신 prominence 사용, 280ms로 이중 피크(double peak) 방지 |
 | 이상치 제거 | Tukey IQR (1.5×IQR) | 피크 높이·관절각 최대치 모두에 적용해 센서 튐값 제거 |
-| 케이던스 | foot row 기준 검출 + **수기 기록값으로 최종 대체** | 단일(편측) IMU라 왕복 보행 주기를 완전히 잡지 못해, 실험 중 스톱워치로 실측한 케이던스를 정답값으로 사용 |
+| 케이던스 | foot row 기준 검출 + **수기 기록값으로 최종 대체** | 실험 중 실측한 케이던스를 정답값으로 사용 |
 | 통계 검정 | Wilcoxon signed-rank (양측) 강제 적용 + Cohen's d 병기 | N=6 소표본이라 정규성을 가정한 t-test 대신 비모수 검정을 채택, 유의성 하나에 의존하지 않도록 효과크기를 함께 보고 |
 
 | 그림 | 설명 |
