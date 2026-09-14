@@ -1,0 +1,16 @@
+# --- data folder: keep the folder, ignore its contents ---
+data/*
+!data/.gitkeep
+
+# --- results folder: keep the folder, ignore its contents (regenerable via analysis/run_analysis.py) ---
+results/*
+!results/.gitkeep
+
+# --- Python ---
+.venv/
+__pycache__/
+*.pyc
+
+# --- OS ---
+.DS_Store
+Thumbs.db

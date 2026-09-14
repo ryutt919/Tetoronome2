@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>급성·비훈련 노출 해석 + 인용 검증 요약 (Claude 보충본) — 2026-06-10</title>
+  <style>
+    :root {
+      --bg: #f6f8fb; --paper: #ffffff; --ink: #15212e; --muted2: #5b6b7a;
+      --line: #dde3ec; --blue: #1d4ed8; --blue-dark: #1e3a8a;
+      --support: #0f7b52; --support-bg: #e7f6ef;
+      --contrast: #b42318; --contrast-bg: #fdecec;
+      --mech: #6d28d9; --mech-bg: #f2ecfe;
+      --info: #9a6500; --info-bg: #fff5dc;
+      --gray: #475569; --gray-bg: #eef2f7;
+    }
+    * { box-sizing: border-box; }
+    body { font-family: 'Inter', "Malgun Gothic", "Apple SD Gothic Neo", -apple-system, sans-serif;
+      background: var(--bg); color: var(--ink); line-height: 1.65; margin: 0; font-size: 16px; }
+    main { max-width: 1080px; margin: 0 auto; padding: 32px 20px 80px; }
+    header.page { background: linear-gradient(135deg, #ffffff 0%, #eef4ff 100%);
+      border: 1px solid var(--line); border-radius: 14px; padding: 34px 30px; margin-bottom: 22px; }
+    header.page h1 { margin: 0 0 8px; font-size: 1.8rem; color: var(--blue-dark); }
+    header.page .sub { color: var(--gray); font-size: 1.02rem; margin: 0; }
+    section.card { background: var(--paper); border: 1px solid var(--line); border-radius: 12px;
+      padding: 26px 28px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.03); }
+    h2 { color: var(--blue-dark); border-bottom: 2px solid var(--line); padding-bottom: 10px; margin: 0 0 18px; font-size: 1.4rem; }
+    h3 { color: var(--blue); margin: 24px 0 10px; font-size: 1.13rem; }
+    .integrity { border-left: 5px solid var(--blue); background: #eff5ff; padding: 14px 18px; border-radius: 8px; margin: 6px 0 0; }
+    .legend { display: flex; flex-wrap: wrap; gap: 10px; margin: 8px 0 0; }
+    .badge { display: inline-block; border-radius: 999px; padding: 3px 11px; font-size: 0.82rem; font-weight: 700; white-space: nowrap; }
+    .b-support { color: var(--support); background: var(--support-bg); }
+    .b-contrast { color: var(--contrast); background: var(--contrast-bg); }
+    .b-mech { color: var(--mech); background: var(--mech-bg); }
+    .b-info { color: var(--info); background: var(--info-bg); }
+    .b-core { color: #fff; background: #be123c; }
+    .pillar { border: 1px solid var(--line); border-left: 6px solid var(--gray); border-radius: 10px;
+      padding: 18px 20px; margin: 16px 0; background: #fcfdff; }
+    .pillar.t-support { border-left-color: var(--support); }
+    .pillar.t-mech { border-left-color: var(--mech); }
+    .pillar h4 { margin: 0 0 6px; font-size: 1.05rem; color: var(--ink); }
+    .pillar .row { margin: 7px 0; }
+    .pillar .label { display: inline-block; min-width: 92px; font-weight: 700; color: #334155; font-size: 0.9rem; vertical-align: top; }
+    blockquote.ex { margin: 7px 0; padding: 8px 12px; background: #f7f9fc; border-left: 3px solid #b9c4d2;
+      color: #334155; font-size: 0.9rem; border-radius: 0 6px 6px 0; }
+    blockquote.ex cite { display: block; color: var(--muted2); font-style: normal; font-size: 0.82rem; margin-top: 4px; }
+    .safe { background: #f0fdf4; border: 1px dashed #86c9a8; border-radius: 8px; padding: 10px 14px; margin-top: 10px; font-size: 0.95rem; }
+    .safe b { color: var(--support); }
+    .nope { background: #fdf2f2; border: 1px dashed #e2a3a3; border-radius: 8px; padding: 10px 14px; margin-top: 10px; font-size: 0.95rem; }
+    .nope b { color: var(--contrast); }
+    table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 0.9rem; }
+    th, td { border: 1px solid var(--line); padding: 9px 11px; text-align: left; vertical-align: top; }
+    th { background: #eef3fa; color: #2d3a4b; }
+    td.c { text-align: center; }
+    a { color: var(--blue); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .refs { font-size: 0.88rem; color: #2a3340; }
+    .refs li { margin: 9px 0; }
+    .vgrade { font-weight: 700; font-size: 0.78rem; padding: 1px 7px; border-radius: 6px; }
+    .v-full { color: var(--support); background: var(--support-bg); }
+    .v-abs { color: var(--info); background: var(--info-bg); }
+    .foot { color: var(--muted2); font-size: 0.86rem; border-top: 1px solid var(--line); padding-top: 16px; margin-top: 8px; }
+    .ok { color: var(--support); font-weight: 700; }
+    .warn { color: var(--info); font-weight: 700; }
+  </style>
+</head>
+
+<body>
+<main>
+  <header class="page">
+    <h1>급성·비훈련 노출 해석 + 인용 검증 요약</h1>
+    <p class="sub">테토로놈 N=6 · Claude 보충본 · 작성일 2026-06-10 · 메인 해석본 <a href="results_interpretation_claude.html">results_interpretation_claude.html</a>의 부속</p>
+    <div class="integrity" style="margin-top:16px;">
+      <strong>이 문서의 목적</strong><br>
+      ① 메인 해석본이 인용한 <strong>16편을 원문에서 독립 재검증</strong>한 결과 요약(<a href="citation_factcheck_session.md">citation_factcheck_session.md</a>).<br>
+      ② 메트로놈 결과가 가설과 반대로 나온 데 대한 <strong>"비훈련·급성 노출" 해석</strong>과 그 근거(<a href="untrained_acute_metronome_evidence.md">untrained_acute_metronome_evidence.md</a>).<br>
+      ③ 기존 파일은 <strong>일절 수정하지 않았으며</strong>, 모든 인용은 이 세션에서 원문 fetch/PDF로 확인했습니다.
+    </div>
+  </header>
+
+  <!-- ===================== 인용 검증 요약 ===================== -->
+  <section class="card">
+    <h2>1. 인용 검증 요약 — 16/16 사실 일치</h2>
+    <p>메인 해석본의 인용 16편을 <code>verification_log.md</code>를 신뢰하지 않고 이번 세션에 원문(PMC/PubMed 전문·로컬 PDF)에서 다시 대조했습니다. <strong>모든 수치(%, p, d, 각도, BW/s)와 발췌가 원문과 일치</strong>했고, 지지/대조/가능성 분류도 타당했습니다.</p>
+    <table>
+      <thead><tr><th>묶음</th><th>검증한 인용</th><th>판정</th></tr></thead>
+      <tbody>
+        <tr><td>충격(메트로놈)</td><td>[1] Heiderscheit, [2] PMC8329321, [3] PMC8772793, <b>[4] PMC6203338(핵심)</b>, [5] Schubert, [6] PMC12440572, [7] Farley, [8] Kulmala</td><td class="c"><span class="ok">8/8 일치</span></td></tr>
+        <tr><td>변동성(메트로놈)</td><td>[9] PMC3466237, [10] Hove, [11] PubMed 22871238, [12] Cronström</td><td class="c"><span class="ok">4/4 일치</span></td></tr>
+        <tr><td>테이핑</td><td>[13] Chinn, <b>[14] Cordova</b>, [15] Raymond, [16] Yong(PDF)</td><td class="c"><span class="warn">3 일치 + [14] 인용형식</span></td></tr>
+      </tbody>
+    </table>
+    <div class="safe"><b>핵심 확인:</b> 가장 위험했던 주장 — "충격 proxy가 안 줄어도 분절가속도 문헌과는 모순 아님" — 의 버팀목 <b>[4] PMC6203338</b>이 정확히 일치합니다. 원문: <i>"We did not find differences in peak tibial accelerations ... among running patterns"</i> (케이던스↑ 5.5g vs 후족 5.4g, loading rate 비감소; 감소는 forefoot만). 게다가 [4]는 경골 가속도계를 써 본 실험 shank IMU와 같은 신호입니다.</div>
+    <div class="nope"><b>유일한 흠 ([14] Cordova 2000):</b> 메인 해석본이 따옴표(직접인용)로 적은 <i>"taping offered the most support for limiting dorsiflexion ROM"</i>는 원문 요약(<i>"Tape braces gave more support than lace-up braces"</i>)의 <b>의역</b>입니다. 사실관계는 옳으나 인용형식만 "요지(paraphrase)"로 바꾸거나 원문 문장으로 교체 권장. (나머지 15편의 따옴표는 원문 그대로였음.)</div>
+  </section>
+
+  <!-- ===================== 급성·비훈련 해석 ===================== -->
+  <section class="card">
+    <h2>2. "비훈련·급성 노출" 해석 — 메트로놈 결과가 반대로 나온 이유</h2>
+    <p><strong>가설:</strong> 본 메트로놈 결과(충격 proxy↑·보폭 CV↑·골반 미개선)는 피험자가 비훈련 상태에서 <strong>단일 세션(급성)</strong>으로 메트로놈을 처음 적용받았기 때문일 수 있습니다. 즉 "훈련 후 정착되는 이득"이 아니라 <strong>"급성 적응 비용"</strong>을 관찰했을 가능성입니다.</p>
+    <div class="integrity" style="background:#fdf2f2;border-left-color:#be123c;">
+      <span class="badge b-core">정직성 범위</span> 이 해석은 <strong>보폭 변동성(CV) 증가</strong>에는 근거가 강하고(급성 과보정 + 이중과제 부하), <strong>충격 proxy 비감소</strong>에는 부분적(간접)입니다. <strong>"비훈련이라 충격이 <i>증가</i>했다"는 단정 금지</strong> — 케이던스 reviews<sup>[6]</sup>는 급성 5–10% 증가도 보통 부하를 낮춥니다. 충격 결과는 "이득 미정착<sup>[A]</sup> + 분절가속도는 원래 케이던스로 안 줄어듦<sup>[4]</sup>"의 결합으로 기술하세요.
+    </div>
+
+    <div class="pillar t-support">
+      <h4>근거 1 — 충격·부하 이득은 <strong>수 주 적응</strong>을 거쳐야 나타난다 (급성 ≠ 적응) <span class="badge b-support">✅ 직접 지지</span></h4>
+      <div class="row"><span class="label">발췌</span> 케이던스 +5.7% 군에서 <i>impact peak −10.2%</i>, VALR·VILR 감소가 <strong>훈련 후</strong> 나타남. <i>"twelve weeks of gait retraining allows the <b>initial adaptation of musculoskeletal structures</b> to new running patterns."</i></div>
+      <blockquote class="ex">건강 남성 recreational runner 24명, 12주 재훈련.<cite>— 12주 케이던스 재훈련<sup><a href="#rA">[A]</a></sup> (전문 검증, 2026-06-10)</cite></blockquote>
+      <div class="row"><span class="label">함의</span> 본 실험은 단일 세션 급성 노출 → impact peak·loading rate 감소(적응 산물)가 <strong>나타날 시간이 없었음.</strong> 충격 proxy 비감소는 "적응 미완"과 일관.</div>
+    </div>
+
+    <div class="pillar t-mech">
+      <h4>근거 2 — 외부 박자에 <strong>급성 동기화</strong>는 자연 보행 제어를 교란 <span class="badge b-mech">🔬 기전 지지</span></h4>
+      <blockquote class="ex">"walking to an external beat may impose <b>unnatural neuromuscular rhythms</b> on the otherwise highly fractal dynamics of human gait, resulting in a <b>loss of functional adaptability</b>."<cite>— Hove 등<sup><a href="#r10">[10]</a></sup> (전문 검증)</cite></blockquote>
+      <blockquote class="ex">변동성 크기(SD)는 불변이나 dual-constraint(treadmill+RAC)에서 <b>"anti-persistent pattern"</b> — 편차 직후 <b>과보정</b>.<cite>— Terrier 계열<sup><a href="#r9">[9]</a></sup> (전문 검증)</cite></blockquote>
+      <div class="row"><span class="label">함의</span> 매 보폭을 박자에 즉시 맞추려는 급성 동기화 → <strong>과보정</strong>. 본 실험의 유일 유의 결과 <strong>T→T+M step CV +16.41%(p=.031)</strong> 와 방향·기전이 정확히 일치(테이핑+메트로놈 이중 제약).</div>
+    </div>
+
+    <div class="pillar t-mech">
+      <h4>근거 3 — 동기화는 <strong>추가 주의·인지 부하</strong>를 요구한다 (이중과제 비용) <span class="badge b-mech">🔬 기전 지지</span></h4>
+      <blockquote class="ex">트레드밀 보행은 <i>"not a purely automatic task"</i> — 반응시간이 앉은 자세보다 길어 보행 안정에 주의 자원이 소모됨.<cite>— "Human treadmill walking needs attention"<sup><a href="#rB">[B]</a></sup> (전문 검증)</cite></blockquote>
+      <blockquote class="ex">정상 보행 α=0.74(persistent) → 메트로놈 α=0.39(anti-persistent, d=−1.75); <i>"a clear correlation between the level of <b>attention</b> directed towards gait and the <b>anti-persistence</b>"</i>.<cite>— Piergiovanni &amp; Terrier 2024<sup><a href="#rC">[C]</a></sup> (전문 검증, PMC 무료본)</cite></blockquote>
+      <div class="row"><span class="label">함의</span> 러닝은 이미 주의를 요구하는데 "박자 듣고 매 스텝 맞추기"가 더해지면 <strong>이중과제 부하</strong>가 커짐. 메트로놈→과보정(anti-persistence)이 <strong>주의·의식적 제어와 직결</strong>됨이 정량적으로 확인됨<sup>[C]</sup>. 비훈련 피험자는 동기화가 자동화 안 돼 타이밍 변동성↑.</div>
+    </div>
+
+    <div class="pillar t-mech">
+      <h4>근거 4 — 친숙도는 변동성 비용을 줄이나, 타이밍 전이는 연습저항적 <span class="badge b-mech">🔬 가능성/경계</span></h4>
+      <div class="row"><span class="label">방향 지지</span> 친숙도↑면 리듬 cue의 보폭 변동성 비용 감소 — <i>"reduced stride variability in PD"</i>(파킨슨 음악 cue 연구, 20명). 대상이 PD라 <strong>limited transfer</strong>.</div>
+      <div class="row"><span class="label">⚠️ 경계</span> 운동학습 연구(PMC5832267, 피아노 초보)는 연습/스케줄이 <strong>운동(움직임) 기술</strong> 전이는 도왔으나 <i>"minimal impact on timing skill transfer"</i> — <strong>타이밍 정확도는 연습으로 잘 개선되지 않을 수 있음.</strong> 본 실험의 핵심이 타이밍 변동성(CV)이므로, "훈련하면 CV가 자연히 좋아진다"는 낙관을 부분적으로 경계.</div>
+    </div>
+
+    <h3>본 데이터와의 연결</h3>
+    <table>
+      <thead><tr><th>관찰</th><th>급성·비훈련 해석</th></tr></thead>
+      <tbody>
+        <tr><td>케이던스는 성공적으로 부과됨 (C→M +4.58%, 5명 전원 일관)</td><td>박자를 "따라갈 수는" 있었음. 그러나 "박자 맞추기" ≠ "보행이 매끄럽게 적응됨"(후자는 훈련 필요, 근거1)</td></tr>
+        <tr><td>유의 신호가 하필 이중제약(T→T+M)의 CV↑</td><td>근거2(과보정)·근거3(이중과제)과 같은 상황 — 가장 강한 동기화 부담에서 가장 큰 변동성</td></tr>
+        <tr><td>충격 proxy 비감소</td><td>근거1(이득 미정착) + [4](분절가속도는 케이던스로 원래 안 줄어듦)의 결합. "증가했다" 단정 금지</td></tr>
+      </tbody>
+    </table>
+
+    <div class="safe"><b>안전 문장 (예):</b> 본 실험은 단일 세션의 <b>급성</b> 메트로놈 적용이었다. 케이던스 재훈련의 충격·부하 이득은 수 주간의 근골격 적응을 거쳐 나타난다는 보고<sup>[A]</sup>를 고려하면, 충격 proxy 감소가 관찰되지 않은 것은 <b>적응 정착 이전의 급성 반응</b>일 수 있다. 외부 박자에 대한 급성 동기화는 자연 보행의 시간 구조를 교란하고<sup>[10]</sup>, 이중 제약에서 과보정을 유발하며<sup>[9]</sup>, 보행이 요구하는 주의 자원에<sup>[B]</sup> 추가 동기화 부하를 더한다. 비훈련 피험자의 보폭 타이밍 변동성 증가, 특히 복합조건의 유의한 증가는 이러한 <b>급성 동기화 비용</b>으로 해석할 수 있다.</div>
+    <div class="nope"><b>쓰면 안 되는 문장:</b> "메트로놈이 충격을 키운다/보행을 악화시킨다는 것을 입증했다"(단일세션·N=5~6·proxy·다중비교 미보정) · "훈련하면 가설대로 나올 것임을 본 데이터가 보여준다"(훈련군 없음 → <i>다음 연구 가설</i>로만) · 근거4를 "비훈련이라 나빴다"의 직접 증명으로 인용(가능성까지만).</div>
+
+    <h3>다음 연구 제언</h3>
+    <ul>
+      <li><strong>종단 설계:</strong> 동일 피험자 메트로놈 1세션 vs 수 주 재훈련 후 재측정(within-subject)으로 "급성 비용 → 훈련 후 이득" 전환 검정.</li>
+      <li><strong>친숙화 블록:</strong> 측정 전 동기화 친숙화 시간 부여, 친숙화 전후 CV 비교.</li>
+      <li><strong>속도 통제 명시:</strong> 급성 케이던스↑ 시 속도 동반증가 여부 기록 (충격 결과 교란 차단, <a href="data_caveats.md">data_caveats.md</a> §1).</li>
+    </ul>
+  </section>
+
+  <!-- ===================== 참고문헌 ===================== -->
+  <section class="card">
+    <h2>3. 이 보충본에서 새로 추가된 근거</h2>
+    <p style="font-size:0.86rem;color:#5b6b7a;">메인 해석본의 [1]–[16]은 <a href="results_interpretation_claude.html">results_interpretation_claude.html</a> 참조. 아래 [A][B]는 이 보충본에서 추가 검증한 문헌. 발췌 원문은 <a href="untrained_acute_metronome_evidence.md">untrained_acute_metronome_evidence.md</a>.</p>
+    <ol class="refs">
+      <li id="rA"><span class="vgrade v-full">전문</span> [A] Effects of 12-week cadence retraining on impact peak, load rates and lower extremity biomechanics in running. <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC7450991/">PMC7450991</a> — 12주 재훈련 후 impact peak −10.2%, "initial adaptation of musculoskeletal structures."</li>
+      <li id="rB"><span class="vgrade v-full">전문</span> [B] Human treadmill walking needs attention (dual-task). <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC1564141/">PMC1564141</a> — 트레드밀 보행은 "not a purely automatic task."</li>
+      <li id="rC"><span class="vgrade v-full">전문</span> [C] Piergiovanni S, Terrier P. (2024). Effects of metronome walking on long-term attractor divergence and correlation structure of gait: a validation study in older people. <em>Sci Rep</em> 14:15917. <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC11233570/">PMC11233570</a> — 메트로놈 보행 α 0.74→0.39(anti-persistent), 주의-과보정 직결. 대상=고령자 보행(limited transfer).</li>
+      <li id="r9"><span class="vgrade v-full">전문</span> [9] Step-to-Step Variability in Treadmill Walking: Influence of Rhythmic Auditory Cueing. <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC3466237/">PMC3466237</a></li>
+      <li id="r10"><span class="vgrade v-full">전문</span> [10] The Effects of Rhythmic Sensory Cues on the Temporal Dynamics of Human Gait (Hove 등). <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC3424126/">PMC3424126</a></li>
+    </ol>
+    <p style="font-size:0.86rem;color:#5b6b7a;">배경(limited transfer로만 사용, 이 세션 전문 확인): 친숙도→보폭변동성 감소(파킨슨 음악 cue 연구, S096663622100151X) · 운동학습 dissociation(PMC5832267 — 연습은 <b>운동기술</b> 전이는 돕지만 <b>타이밍기술</b> 전이엔 영향 미미). <br>※ [C] PMC11233570은 당초 Nature 인증게이트로 막혔던 논문(s41598-024-65662-5)의 <b>PMC 무료본으로 재검증 성공</b> → 위 참고문헌 [C]로 정식 승격.</p>
+  </section>
+
+  <p class="foot">
+    같은 폴더 부속: <a href="results_interpretation_claude.html">results_interpretation_claude.html</a> (메인 해석) ·
+    <a href="citation_factcheck_session.md">citation_factcheck_session.md</a> (인용 16편 재검증) ·
+    <a href="untrained_acute_metronome_evidence.md">untrained_acute_metronome_evidence.md</a> (급성 노출 근거) ·
+    <a href="data_caveats.md">data_caveats.md</a> (데이터 한계).<br>
+    본 보충본은 기존 파일을 <strong>일절 수정하지 않았습니다.</strong> 결과 수치는 <code>results/statistical_tests.csv</code>, 인용은 이 세션 원문 fetch/PDF 검증.
+  </p>
+</main>
+</body>
+</html>

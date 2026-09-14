@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tetoronom Analysis Pipeline</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --surface-color: #ffffff;
+            --surface-hover: #f1f5f9;
+            --primary-accent: #2563eb;
+            --secondary-accent: #7c3aed;
+            --success: #059669;
+            --text-main: #1e293b;
+            --text-muted: #475569;
+            --border-color: #e2e8f0;
+            --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            --card-hover-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+        }
+
+        body {
+            font-family: 'Inter', 'Noto Sans KR', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 0;
+            line-height: 1.7;
+            font-size: 17px;
+            /* 폰트 크기 증가 */
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 50px 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 60px;
+            padding: 50px;
+            background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);
+            border-radius: 20px;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--card-shadow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(37, 99, 235, 0.05) 0%, transparent 60%);
+            z-index: 0;
+            animation: pulse 10s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        header h1 {
+            font-size: 3.2rem;
+            margin: 0 0 15px 0;
+            background: linear-gradient(to right, #1d4ed8, #6d28d9);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            z-index: 1;
+            position: relative;
+            font-weight: 700;
+        }
+
+        header p {
+            font-size: 1.3rem;
+            color: var(--text-muted);
+            margin: 0;
+            z-index: 1;
+            position: relative;
+            font-weight: 500;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 40px;
+            margin-bottom: 40px;
+        }
+
+        .card {
+            background: var(--surface-color);
+            border-radius: 16px;
+            padding: 40px;
+            border: 1px solid var(--border-color);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: var(--card-shadow);
+        }
+
+        .card:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--card-hover-shadow);
+            border-color: #cbd5e1;
+        }
+
+        .card h2 {
+            font-size: 1.8rem;
+            margin-top: 0;
+            margin-bottom: 25px;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 15px;
+        }
+
+        .icon {
+            font-size: 2rem;
+        }
+
+        .method-block {
+            margin-bottom: 30px;
+            padding: 25px;
+            background: #f8fafc;
+            border-radius: 12px;
+            border-left: 5px solid var(--primary-accent);
+        }
+
+        .method-block:last-child {
+            margin-bottom: 0;
+        }
+
+        .method-block h3 {
+            font-size: 1.4rem;
+            margin: 0 0 15px 0;
+            color: #1e293b;
+        }
+
+        .method-detail {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .detail-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            background: #ffffff;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            color: #334155;
+            min-width: 140px;
+            flex-shrink: 0;
+        }
+
+        .detail-value {
+            color: #475569;
+        }
+
+        .code-inline {
+            background: #f1f5f9;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            color: #db2777;
+            font-size: 0.9em;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-right: 8px;
+            margin-bottom: 8px;
+        }
+
+        .badge.primary {
+            background: #dbeafe;
+            color: #1e40af;
+            border: 1px solid #bfdbfe;
+        }
+
+        .badge.secondary {
+            background: #f3e8ff;
+            color: #6b21a8;
+            border: 1px solid #e9d5ff;
+        }
+
+        .badge.success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+
+        .badge.warning {
+            background: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fde68a;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin-top: 20px;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        th,
+        td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background: #f1f5f9;
+            color: #334155;
+            font-weight: 600;
+            font-size: 1.05rem;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:nth-child(even) td {
+            background: #fafafa;
+        }
+
+        tr:hover td {
+            background: #f1f5f9;
+        }
+
+        .highlight-text {
+            color: #b91c1c;
+            font-weight: 600;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Tetoronom Analysis Pipeline</h1>
+            <p>상세 데이터 전처리 및 분석 방법론</p>
+            <p style="color: var(--text-muted); margin-top: 8px;">작성일: 2026-06-10 · 수정본: A→B evidence-refined version</p>
+        </header>
+
+        <!-- 1. 핵심 피크 검출 (Peak Detection) -->
+        <div class="card">
+            <h2><span class="icon">⛰️</span> 1. 핵심 피크 검출 로직</h2>
+            <p style="margin-bottom: 20px; color: var(--text-muted);">착지 충격을 식별하는 기반 알고리즘. 다른 파생 지표들의 계산 기준점이 됩니다.
+            </p>
+            <div class="method-block" style="border-left-color: #059669;">
+                <h3>피크 탐지</h3>
+                <div class="method-detail">
+                    <div class="detail-item">
+                        <span class="detail-label">입력 신호</span>
+                        <span class="detail-value">Shank의 <strong>합성가속도(Resultant Acceleration)</strong>를
+                            사용합니다.</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">스무딩 (Smoothing)</span>
+                            <span class="detail-value">데이터에 <strong>4차 Butterworth Low-pass Filter (Cutoff:
+                                    15Hz)</strong>를 적용합니다. 일상 신체활동/보행 가속도 분석 문헌은 인체 움직임 가속도 평가에서 대략 15~20Hz 이하의 저주파 대역을 중요하게 다루며,
+                                Bouten 등은 일상 신체활동 평가를 위해 최대 20Hz까지의 주파수 등록을 고려해야 한다고 제시했습니다. 따라서 15Hz cutoff는 문헌이 제시한 보편적 정답이 아니라,
+                                본 데이터의 보행/가벼운 러닝 신호에서 주된 움직임 성분을 보존하면서 고주파 노이즈를 줄이기 위한 보수적 전처리 선택입니다.<sup>[1][2]</sup></span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">피크 임계값 설정</span>
+                        <span class="detail-value">
+                            • <strong>Height (절대 높이):</strong> 사람마다 체중이나 충격량 범위가 다르므로 동적 임계값을
+                            <strong>제거</strong>했습니다.<br>
+                            • <strong>Prominence (돌출도):</strong> <span class="code-inline">0.2 * g</span> (약
+                            1.96m/s²). 본 데이터의 노이즈 수준을 고려한 경험적 후보 기준으로, 주변 노이즈보다 0.2g 이상 확연하게 솟아오른 뚜렷한 피크만을 1차 후보로 인정합니다.<br>
+                            • <strong>최소 간격 (Distance):</strong> 280ms (FS 기준 16샘플)를 주어 이중 피크(Double peak) 검출을
+                            방지합니다. 280ms는 약 214 steps/min까지의 매우 빠른 step frequency를 허용하는 값이며, 야외 달리기 연구에서 imposed step frequency가
+                            140~200 steps/min 범위로 설정된 점을 고려하면 본 데이터의 중복 피크 억제 기준으로 보수적입니다.<sup>[3]</sup>
+                        </span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">IQR 이상치 필터</span>
+                        <span class="detail-value">충격량 분석 시 외란성 피크를 제거하기 위해 검출된 피크 높이들을 대상으로 <strong>1.5 * IQR
+                                (Q1-1.5*IQR ~ Q3+1.5*IQR)</strong> 범위를 벗어나는 피크는 배제합니다.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. 지표별 분석 방법론 전수 조사 -->
+        <div class="card">
+            <h2><span class="icon">📊</span> 2. 산출 지표별 상세 처리 방법</h2>
+
+            <div class="method-block">
+                <h3>A. 케이던스 (Cadence)</h3>
+                <div class="method-detail">
+                    <div class="detail-item">
+                        <span class="detail-label">사용 데이터</span>
+                        <span class="detail-value"><strong>Foot row 기준</strong>의 <span
+                                class="code-inline">shank_free_acceleration_resultant_m_s2</span> (착지 시점과 가장 인접하게
+                            기록됨)</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">적용 처리</span>
+                        <span class="detail-value">
+                            <span class="badge success">Smoothing 적용</span> <span class="badge success">IQR 필터
+                                적용</span><br>
+                            버터워스 필터(15Hz)를 적용하여 잔떨림을 제거하고 IQR 필터를 통해 외란성 피크를 배제한 후, 총 정상 피크 개수를 구합니다. 편측(Unilateral)
+                            센서이므로 도출된 케이던스에 <strong>x 2.0 (Bilateral 추정)</strong>을 수행하여 분당 걸음 수(steps/min)로 환산합니다.
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="method-block">
+                <h3>B. 정강이 IMU Shock/Load Proxy (Shank Impact Peak Analysis)</h3>
+                <div class="method-detail">
+                    <div class="detail-item">
+                        <span class="detail-label">사용 데이터</span>
+                        <span class="detail-value"><strong>Shank row</strong>의 <span
+                                class="code-inline">shank_free_acceleration_resultant_m_s2</span> (합성가속도)만을 사용하여
+                            IMU 기반 shock/load proxy를 구합니다. 센서 부착 각도에 상관없이 3차원으로 발생하는 가속도 응답을 파악하기 위해 Z축이 아닌 합성가속도를 사용합니다.</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">적용 처리 (Peak g)</span>
+                        <span class="detail-value">
+                            <span class="badge success">Smoothing 적용</span> <span class="badge success">IQR 필터
+                                적용</span><br>
+                            검출된 합성가속도 피크 값을 중력가속도(9.81)로 나누어 평균 <strong>Peak g</strong>를 산출합니다.
+                        </span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">적용 처리 (Resultant RMS)</span>
+                        <span class="detail-value">
+                            <strong>합성가속도의 제곱평균제곱근(RMS)</strong>을 구하여 측정 구간 동안의 전반적인 가속도 신호 크기를 정량화합니다:
+                            <span class="code-inline">sqrt(mean(resultant^2))</span>
+                        </span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">적용 처리 (Acceleration-time load proxy)</span>
+                        <span class="detail-value">
+                            합성가속도(Resultant)는 세 축의 제곱의 합의 제곱근(<span class="code-inline">sqrt(X² + Y² + Z²)</span>)으로
+                            계산되므로 <strong>수학적으로 항상 0 이상(양수)</strong>입니다. 따라서 특정 착지 구간(Stance phase)만 어렵게 잘라내지 않고,
+                            <strong>전체 측정 구간의 연속된 값을 그대로 시간 간격(dt)에 대해 적분(<span
+                                    class="code-inline">np.trapz</span>)</strong>합니다. <br>
+                            * <strong>이유와 근거 (PlayerLoad™의 한계와 가속도 기반 부하 지표의 명확화):</strong> 스포츠 현장에서는
+                            <strong>PlayerLoad™</strong>처럼 가속도 기반 누적 부하 지표가 널리 사용되지만, PlayerLoad는 장치 간 차이, 임의 단위(AU), 알고리즘 정의의
+                            불투명성 때문에 해석에 주의가 필요합니다.<sup>[4][5]</sup><br>
+                            따라서 본 파이프라인의 <strong>Impulse</strong> 항목은 legacy/report label이며, 지면반력에 질량을 곱해 계산한 GRF impulse 또는 biomechanical impulse가 아니라,
+                            <strong>합성가속도 크기를 시간에 대해 적분한 acceleration-time load proxy</strong>입니다. 이 지표는 조건 간 누적 가속도 노출을 비교하기 위한
+                            탐색적 외부 부하 지표이며, 가속도 기반 metric은 수식과 단위를 명확히 보고해야 한다는 최근 검토 문헌의 권고와 맞추어 해석합니다.<sup>[6]</sup><br>
+                            마지막으로 이렇게 구한 총 면적을 총 측정 시간으로 나누어 <strong>초당 누적 가속도 노출량(Total acceleration-time load over
+                                time)</strong>를 구합니다.
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="method-block">
+                <h3>C. Step Interval Variability (Step Interval CV)</h3>
+                <div class="method-detail">
+                    <div class="detail-item">
+                        <span class="detail-label">사용 데이터</span>
+                        <span class="detail-value"><strong>Foot row 기준</strong>의 합성가속도 피크 발생 시간</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">적용 처리</span>
+                        <span class="detail-value">
+                            <span class="badge success">Smoothing 적용</span> <span class="badge success">IQR 필터
+                                적용</span><br>
+                            케이던스와 동일하게 15Hz 버터워스 필터 및 IQR 이상치 제거를 거쳐 얻어진 정상 피크들 간의 <strong>시간 간격(Interval,
+                                sec)</strong> 배열을 도출합니다. 이 간격들의 표준편차(SD)를 평균으로 나누어 <strong>CV% (Coefficient of
+                                Variation)</strong>를 산출합니다. <br>
+                            * <strong>이유와 근거 (왜 SD가 아닌 CV인가?):</strong> 보폭 시간(Interval)은 달리는 속도에 따라 평균값이 크게 달라집니다.
+                            느리게 뛰는 사람은 원래 평균 시간 자체가 길기 때문에 단순 표준편차(SD)도 자연스럽게 크게 나옵니다. 따라서 평균의 크기와 무관하게 '상대적인 변동성'을
+                            공정하게 비교하기 위해 평균으로 나누어주는 CV%를 사용하는 것이 보행 변동성 분석에서 널리 쓰이는 방식입니다.<sup>[7][8]</sup><br>
+                            * <strong>이 지표를 보는 이유:</strong> 걸음걸이가 규칙적일수록 발을 내딛는 시간 간격(평균) 대비 변동(표준편차)이 적어 CV%가 낮게
+                            나옵니다. 즉, <strong>값이 낮을수록 step timing variability가 낮다</strong>는 의미이며, 임상적 안정성과 직접 등치하지 않습니다.
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="method-block">
+                <h3>D. 골반 각도 변동성 (Pelvis Pitch/Roll Angular Variability)</h3>
+                <div class="method-detail">
+                    <div class="detail-item">
+                        <span class="detail-label">분석 목적</span>
+                        <span class="detail-value">골반의 가동 범위(ROM) 자체가 중요한 것이 아니라, 걷거나 뛸 때 골반 Pitch/Roll 각도가 <strong>얼마나 크게 변동하는지</strong>를
+                            평가합니다. 이 값은 angular variability 지표이며, 임상적 안정성으로 직접 등치하지 않습니다.</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">사용 데이터</span>
+                        <span class="detail-value">Hip 센서의 <span class="code-inline">hip_quaternion_pitch_deg</span>
+                            (수직 상하 틸트) 및 <span class="code-inline">_roll_deg</span> (좌우 회전/기울기)</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">적용 처리 (안정성)</span>
+                        <span class="detail-value">
+                            <span class="badge success">Smoothing 적용</span><br>
+                            센서 자체의 잔떨림이 골반 각도에 영향을 미치는 것을 막기 위해 <strong>골반 각도 데이터에도 15Hz 버터워스 필터를 선행
+                                적용</strong>합니다.<br>
+                            이후 골반의 수직/좌우 각도 변동성을 파악하기 위해 <strong>Pitch와 Roll의 표준편차(SD)</strong>를 측정합니다. 값이 낮을수록
+                            angular variability가 낮다는 의미입니다.<br>
+                            * <strong>이유와 근거 (왜 CV가 아닌 SD인가?):</strong> 골반 각도(Roll, Pitch)는 0도(중립 자세)를 기준으로 앞뒤/좌우로
+                            진동하는 데이터입니다. 만약 평균 자세가 0도에 가깝다면, 이를 평균으로 나누는 CV 공식(SD / 평균)에서 분모가 0에 수렴해 값이 무한대로 폭발하는
+                            수학적 오류가 발생합니다. 따라서 영점(Zero-point)을 교차하는 각도(Kinematics) 데이터의 흔들림을 평가할 때는 비율(CV)이 아닌
+                            <strong>절대적인 각도 진폭인 표준편차(SD)나 RMS</strong>를 사용하는 것이 타당합니다.<sup>[8][9]</sup><br>
+                            추가로 각도의 미분값에 FS를 곱해 <strong>각속도의 제곱평균제곱근(Vel RMS)</strong>을 산출하여 얼마나 빠르고 거칠게 요동치는지도
+                            측정합니다.
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="method-block">
+                <h3>E. 발목 거동 (Ankle Kinematics)</h3>
+                <div class="method-detail">
+                    <div class="detail-item">
+                        <span class="detail-label">사용 데이터</span>
+                        <span class="detail-value">Foot 센서의 <span
+                                class="code-inline">ankle_dorsiflexion_plantarflexion_deg</span> 및 <span
+                                class="code-inline">_inversion_eversion_deg</span></span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">적용 처리</span>
+                        <span class="detail-value">
+                            <span class="badge success">Smoothing 적용</span><br>
+                            발목 각도 신호 역시 고주파 노이즈 제거를 위해 <strong>15Hz 버터워스 필터를 먼저 적용</strong>합니다.<br>
+                            보폭(Stride)별로 분할하여 전체 가동 범위(ROM)의 평균을 산출합니다.<br>
+                            추가로 각 보폭 구간 내에서 발생하는 <strong>최대 양수 피크(Dorsiflexion)</strong>들의 평균과, <strong>최대 음수
+                                피크(Plantarflexion)</strong>들의 평균을 계산합니다. (Plantarflexion 평균은 해석의 편의를 위해 <span
+                                class="code-inline">abs()</span>를 적용해 <strong>절대값(양수)</strong>으로 변환하여 보고합니다.)
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. 기술통계 및 변화량 산출 방법 -->
+        <div class="card">
+            <h2><span class="icon">📈</span> 3. 기술통계 및 변화량 산출 처리 로직</h2>
+            <p style="color: var(--text-muted); margin-bottom: 20px;">조건 간 변화의 방향과 크기를 기술하기 위한 산출 방법입니다. 표본이 극히 작으므로
+                t-test, Wilcoxon, p-value 기반 유의성 판단은 본 방법 설명과 보고 해석에서 제외합니다. (비교 대상:
+                Control → Metro, Control → Tape, Control → Tape+Metro, Tape → Tape+Metro)</p>
+            <table style="font-size: 0.95rem;">
+                <thead>
+                    <tr>
+                        <th>분석 과정</th>
+                        <th>상세 처리 방식</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>공통 표본 추출</strong></td>
+                        <td>비교하는 두 조건(cond_a, cond_b) 모두에 데이터가 존재하는 피험자(공통 피험자 집합)만을 필터링하여 대응 표본 쌍(Pair)을 구성합니다.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>차이 계산 및 결측치</strong></td>
+                        <td>표본 A와 B 중 하나라도 결측치(NaN)가 있으면 해당 피험자는 비교에서 제외합니다. 변화율(pct_change)은 <span
+                                class="code-inline">(mean_diff / mean_a) * 100</span> 으로 구합니다.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>방향성과 변화량 보고</strong></td>
+                        <td>각 비교는 평균 차이(mean_diff), 변화율(pct_change), 피험자별 변화 방향을 중심으로 해석합니다. N=6(결측 시 N=5)에서는
+                            검정 결과 대신 개인별 반응 패턴과 효과의 방향을 우선 보고합니다.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>제외한 추론통계</strong></td>
+                        <td>표본 수가 너무 작아 t-test, 정규성 검정, Wilcoxon 검정, p-value, 유의성 별표, Cohen's d 기반 결론은 제외합니다. 필요한 경우
+                            원자료와 변화율을 함께 제시해 후속 표본 확장 연구에서 검증할 수 있도록 합니다.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 참고 문헌 (References) -->
+        <div class="card" style="margin-top: 40px; background-color: #f8fafc; border: 1px dashed #cbd5e1;">
+            <h2><span class="icon">📚</span> 참고 문헌 (References)</h2>
+            <ol style="font-size: 0.9rem; color: var(--text-muted); padding-left: 20px; line-height: 1.6;">
+                <li id="ref1">Bouten, C. V. C., Koekkoek, K. T. M., Verduin, M., Kodde, R., & Janssen, J. D. (1997).
+                    "A triaxial accelerometer and portable data processing unit for the assessment of daily physical
+                    activity". <em>IEEE Transactions on Biomedical Engineering</em>, 44(3), 136-147. doi:10.1109/10.554760.
+                    (일상 신체활동 평가에서 인체 가속도 주파수 범위를 최대 20Hz까지 고려해야 함을 제시)</li>
+                <li id="ref2">Karantonis, D. M., Narayanan, M. R., Mathie, M., Lovell, N. H., & Celler, B. G. (2006).
+                    "Implementation of a real-time human movement classifier using a triaxial accelerometer for ambulatory
+                    monitoring". <em>IEEE Transactions on Information Technology in Biomedicine</em>, 10(1), 156-167.
+                    doi:10.1109/TITB.2005.856864. (허리 착용 3축 가속도 기반 활동 분류에서 필터링과 특징 추출을 적용한 wearable 분석 배경 근거)</li>
+                <li id="ref3">de Ruiter, C. J., van Daal, S., & van Dieen, J. H. (2019). "Individual optimal step
+                    frequency during outdoor running". <em>European Journal of Sport Science</em>, 20(2), 182-190.
+                    doi:10.1080/17461391.2019.1626911. (야외 달리기에서 140-200 steps/min 범위의 imposed step frequency 사용)</li>
+                <li id="ref4">Nicolella, D. P., Torres-Ronda, L., Saylor, K. J., & Schelling, X. (2018). "Validity
+                    and reliability of an accelerometer-based player tracking device". <em>PLOS ONE</em>, 13(2), e0191823.
+                    doi:10.1371/journal.pone.0191823. (PlayerLoad가 임의 단위이며 장치 간 차이와 validity/reliability 보고 기준이 필요함을 제시)</li>
+                <li id="ref5">Bredt, S. G. T., Chagas, M. H., Peixoto, G. H., Menzel, H. J., & de Andrade, A. G. P.
+                    (2020). "Understanding Player Load: Meanings and Limitations". <em>Journal of Human Kinetics</em>, 71,
+                    5-9. doi:10.2478/hukin-2019-0072. (PlayerLoad의 정의, 단위, 물리적 의미 해석의 한계를 논의)</li>
+                <li id="ref6">Freitas, J., Moreira, A., Carvalho, J., Conceição, F., & Estriga, L. (2025).
+                    "Understanding Acceleration-Based Load Metrics: From Concepts to Implementation". <em>Sensors</em>,
+                    25(9), 2764. doi:10.3390/s25092764. (가속도 기반 부하 metric은 계산식과 해석 범위를 명확히 보고해야 함을 정리)</li>
+                <li id="ref7">Hausdorff, J. M. (2005). "Gait variability: methods, modeling and meaning".
+                    <em>Journal of Neuroengineering and Rehabilitation</em>, 2, 19. doi:10.1186/1743-0003-2-19.
+                    (보행 시간 변수의 변동성을 CV 등으로 정규화해 분석하는 방법론 정리)</li>
+                <li id="ref8">Atkinson, G., & Nevill, A. M. (1998). "Statistical methods for assessing measurement
+                    error (reliability) in variables relevant to sports medicine". <em>Sports Medicine</em>, 26(4), 217-238.
+                    doi:10.2165/00007256-199826040-00002. (SD, CV, limits of agreement 등 절대 신뢰도 지표의 적용 범위 정리)</li>
+                <li id="ref9">Preatoni, E., Hamill, J., Harrison, A. J., Hayes, K., Van Emmerik, R. E. A., Wilson,
+                    C., & Rodano, R. (2013). "Movement variability and skills monitoring in sports". <em>Sports
+                        Biomechanics</em>, 12(2), 69-92. doi:10.1080/14763141.2012.738700. (스포츠 동작 변동성의 지표 선택과 해석 범위를 검토)</li>
+            </ol>
+        </div>
+
+    </div>
+    </div>
+
+</body>
+
+</html>
