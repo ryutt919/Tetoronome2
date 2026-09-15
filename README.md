@@ -22,13 +22,15 @@
 
 ### 데이터 수집
 
-Movella/Xsens DOT IMU 3개를 Web Bluetooth로 브라우저에 직접 연결해 수집하는 자체 제작 웹앱([`tools/xsens_dot_streaming_app.html`](tools/xsens_dot_streaming_app.html))을 만들어 사용했습니다. 별도 벤더 소프트웨어 없이 Chrome/Edge에서 페어링부터 측정, CSV 저장까지 끝냅니다.
+Xsens DOT IMU 3개를 Web Bluetooth로 브라우저에서 직접 스트리밍하는 웹앱([`tools/xsens_dot_streaming_app.html`](tools/xsens_dot_streaming_app.html))으로 수집. 별도 프로그램 설치 없이 Chrome/Edge에서 페어링·측정·CSV 저장을 한 페이지에서 처리.
 
-- 각 센서는 쿼터니언 자세 + free acceleration을 담은 BLE payload를 전송. shank-foot 상대 쿼터니언에서 발목 DF/PF·Inv/Ev를, 골반 쿼터니언에서 pitch/roll을 실시간 계산해 화면에 표시
-- 측정 전 피험자를 quiet standing 자세로 세우고 "Calibrate zero"로 영점을 잡음 — 1장 캘리브레이션 사진이 이 단계
-- 화면 표시용으로는 순환 저역통과 스무딩(±180° 경계 점프 방지)을 걸지만, CSV에는 필터 전/후 값을 모두 남겨 오프라인 분석에서 원신호를 그대로 다시 씀
-- "Start CSV logging"으로 BLE 알림이 올 때마다 한 행씩 저장하며 `source_segment`로 어느 센서에서 온 샘플인지 표시 — 가속도 컬럼은 shank 값만 모든 행에 함께 기록되는 구조로, 아래 broadcast 설명과 같은 원인
-- 접촉/이지(toe-off) 탐지, GCT, 케이던스 같은 현장 확인용 미니 분석 기능도 페이지에 내장했지만, 최종 지표·통계는 전부 `analysis/pipeline.py`에서 다시 계산
+- 각 센서는 "Complete Quaternion" payload로 자세(quaternion w/x/y/z)와 free acceleration(x/y/z)을 BLE 알림마다 전송
+- 발목각은 foot·shank 쿼터니언의 상대 회전(`conjugate(shank) × foot`)을 axis-angle(rotation vector)로 변환해 계산하고, 골반각은 hip 쿼터니언을 같은 방식으로 바로 변환. 오일러각 대신 쿼터니언 상대 회전을 쓴 이유는 축 순서에 따라 값이 달라지는 오일러각의 짐벌락·표현 모호성을 피하기 위함
+- IMU가 내놓는 쿼터니언은 센서 전원이 켜질 때의 절대 좌표계 기준이라 그 자체로는 해부학적 의미가 없음. 측정 직전 피험자를 quiet standing 자세로 세우고 "Calibrate zero"로 그 시점 쿼터니언을 기준값으로 저장한 뒤 이후 값에서 빼서, 중립 자세를 0°로 맞춤 — 1장 캘리브레이션 사진이 이 단계
+- 화면에는 순환 저역통과 필터(smoothing % 조절 가능)를 걸어 표시. 일반 저역통과는 각도가 ±180°를 넘나들 때 이를 큰 점프로 오판하므로, 두 각도 차를 항상 -180~180° 범위로 감싸는 circular diff를 필터 안에 넣어 이 문제를 막음
+- 화면용 스무딩은 실시간 가독성이 목적이라 CSV에는 raw / unfiltered / filtered 값을 모두 남기고, 실제 분석은 `analysis/pipeline.py`의 4차 Butterworth 15Hz(zero-phase)로 오프라인에서 다시 필터링
+- BLE 알림이 올 때마다 한 행씩 저장하며 `source_segment`로 어느 센서 샘플인지 표시. 가속도 컬럼은 매 행에 shank의 최신값을 함께 적는데, foot/hip row에도 `shank_free_acceleration_*` 값이 그대로 나타나는 게 이 때문 (4장 broadcast 설명 참고)
+- 접촉·이지(toe-off) 시점을 국소 극값으로 잡아 GCT·케이던스를 즉석에서 보여주는 기능도 페이지에 있음. 현장에서 센서 부착 상태를 바로 확인하는 용도이고, 실제 통계에 쓴 수치는 전부 오프라인 파이프라인에서 다시 계산
 
 ```
 data/{피험자}/{피험자}_{조건}.csv
