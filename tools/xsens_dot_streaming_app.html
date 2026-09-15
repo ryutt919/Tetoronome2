@@ -1,0 +1,1268 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Xsens DOT Running Analysis Streamer - Hip Quaternion</title>
+    <style>
+:root {
+  color-scheme: light;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #eef2f7;
+  color: #111827;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: radial-gradient(circle at top left, #dbeafe 0, transparent 32rem), #eef2f7;
+}
+button, select, input { font: inherit; max-width: 100%; }
+button, select, input[type="text"], input[type="number"], input[type="file"] {
+  border-radius: 0.75rem;
+  border: 1px solid #cbd5e1;
+  padding: 0.75rem 0.95rem;
+  background: #ffffff;
+  width: 100%;
+}
+select, input { min-width: 0; }
+input[type="text"], input[type="number"] { color: #111827; }
+input[type="range"] { width: 100%; }
+button {
+  cursor: pointer;
+  border-color: #1f6feb;
+  background: #1f6feb;
+  color: #ffffff;
+  font-weight: 700;
+  transition: transform 140ms ease, box-shadow 140ms ease, opacity 140ms ease;
+}
+button:hover { transform: translateY(-1px); box-shadow: 0 0.5rem 1.1rem rgba(31,111,235,0.18); }
+button.secondary { background: #ffffff; color: #1f2937; border-color: #cbd5e1; }
+button:disabled { cursor: not-allowed; opacity: 0.55; transform: none; box-shadow: none; }
+#app { width: min(1240px, calc(100% - 2rem)); margin: 0 auto; padding: 1.5rem 0 3rem; }
+.hero { display: flex; justify-content: space-between; gap: 1rem; align-items: flex-end; margin-bottom: 1.25rem; }
+h1, h2, h3, p { margin: 0; }
+h1 { font-size: clamp(2rem, 4vw, 4.4rem); line-height: 0.95; letter-spacing: -0.06em; max-width: 820px; }
+h2 { font-size: 1.1rem; }
+h3 { font-size: 0.98rem; }
+.lede { color: #4b5563; margin-top: 0.8rem; max-width: 860px; line-height: 1.5; }
+.eyebrow { color: #2563eb; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.13em; font-weight: 800; margin-bottom: 0.35rem; }
+.hero-status, .status-pill {
+  border-radius: 999px;
+  padding: 0.55rem 0.8rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  white-space: nowrap;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #475569;
+}
+.hero-status[data-state="ok"], .status-pill[data-state="connected"] { border-color: #9ae6b4; background: #f0fff4; color: #166534; }
+.status-pill[data-state="streaming"] { border-color: #93c5fd; background: #eff6ff; color: #1d4ed8; }
+.hero-status[data-state="error"], .status-pill[data-state="disconnected"] { border-color: #fecaca; background: #fff1f2; color: #b91c1c; }
+.status-pill[data-state="connecting"] { border-color: #fde68a; background: #fffbeb; color: #92400e; }
+.layout { display: grid; grid-template-columns: 1.45fr 0.95fr; gap: 1rem; }
+.panel {
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 1.25rem;
+  background: rgba(255,255,255,0.92);
+  box-shadow: 0 1rem 3rem rgba(15,23,42,0.08);
+  padding: 1rem;
+}
+.live-panel { grid-row: span 5; }
+.metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr)); gap: 0.75rem; margin-bottom: 1rem; }
+.metric-grid div, .analysis-summary-card {
+  border-radius: 1rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 0.8rem;
+}
+.metric-grid span, dt, .analysis-summary-card span { display: block; color: #64748b; font-size: 0.8rem; margin-bottom: 0.35rem; }
+.metric-grid strong, dd, .analysis-summary-card strong { margin: 0; font-weight: 800; font-variant-numeric: tabular-nums; }
+.metric-grid strong { font-size: 1.3rem; }
+canvas { width: 100%; height: 300px; border-radius: 1rem; border: 1px solid #dbe3ef; overflow: hidden; background: #fff; }
+.logging-bar, .analysis-bar { display: grid; gap: 0.85rem; margin-top: 1rem; border-radius: 1rem; border: 1px solid #dbe3ef; background: #f8fafc; padding: 1rem; }
+.analysis-bar { background: #ffffff; }
+.logging-header { display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start; }
+.logging-header > div { flex: 1 1 auto; min-width: 18rem; }
+.inline-status { white-space: nowrap; align-self: flex-start; margin: 0; font-weight: 800; max-width: 13rem; overflow: hidden; text-overflow: ellipsis; text-align: center; }
+.inline-status[hidden] { display: none !important; }
+.inline-status[data-state="active"], .inline-status[data-state="success"] { background: #dcfce7; border-color: #86efac; color: #166534; }
+.inline-status[data-state="info"] { background: #eff6ff; border-color: #bfdbfe; color: #1d4ed8; }
+.inline-status[data-state="error"] { background: #fee2e2; border-color: #fecaca; color: #991b1b; }
+.logging-form, .analysis-form { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 0.75rem; }
+.file-control { grid-column: 1 / -1; }
+.button-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 0.55rem; }
+.button-grid.logging-actions { grid-template-columns: repeat(5, minmax(0,1fr)); }
+.button-grid.analysis-actions { grid-template-columns: repeat(3, minmax(0,1fr)); }
+.controls-panel, .sensor-card { display: grid; gap: 0.9rem; }
+.control-row { display: grid; gap: 0.35rem; }
+.control-row label, .checkbox-row { color: #475569; font-weight: 700; }
+.range-row { display: grid; grid-template-columns: 1fr 3.5rem; gap: 0.75rem; align-items: center; }
+.range-row strong { font-variant-numeric: tabular-nums; text-align: right; }
+.checkbox-row { display: flex; align-items: center; gap: 0.55rem; }
+.sensor-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.75rem; }
+dl { display: grid; gap: 0.45rem; margin: 0; }
+dl div { display: grid; grid-template-columns: 8.5rem 1fr; align-items: baseline; gap: 0.75rem; }
+.hint { color: #64748b; line-height: 1.45; font-size: 0.9rem; }
+.battery-value[data-state="ok"] { color: #166534; }
+.battery-value[data-state="warn"] { color: #a16207; }
+.battery-value[data-state="low"] { color: #b91c1c; }
+.battery-value[data-state="charging"] { color: #1d4ed8; }
+.analysis-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 0.75rem; }
+.analysis-summary-card strong { display: block; font-size: 1.15rem; }
+.analysis-figure { border: 1px solid #e2e8f0; border-radius: 0.9rem; background: #ffffff; padding: 0.75rem; }
+.analysis-figure-header { display: flex; justify-content: space-between; gap: 1rem; align-items: baseline; margin-bottom: 0.65rem; }
+.analysis-contact-chart { height: 320px; background: #ffffff; }
+.analysis-table-wrap { overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 0.9rem; background: #ffffff; }
+.analysis-table { width: 100%; border-collapse: collapse; min-width: 2200px; font-size: 0.88rem; }
+.analysis-table th, .analysis-table td { padding: 0.65rem 0.7rem; border-bottom: 1px solid #e2e8f0; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.analysis-table th:first-child, .analysis-table td:first-child { text-align: left; }
+.analysis-table thead th { color: #475569; background: #f8fafc; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.analysis-table tbody tr:last-child td { border-bottom: 0; }
+.axis-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 0.75rem; }
+@media (max-width: 1080px) { .button-grid.logging-actions { grid-template-columns: repeat(3, minmax(0,1fr)); } }
+@media (max-width: 940px) { .hero, .layout { display: block; } .hero-status, .panel { margin-top: 1rem; } }
+@media (max-width: 720px) { .logging-header, .logging-form, .analysis-form, .button-grid.logging-actions, .button-grid.analysis-actions, .axis-grid { grid-template-columns: 1fr; display: grid; } .file-control { grid-column: 1; } .inline-status { white-space: normal; width: fit-content; } }
+@media (max-width: 560px) { #app { width: min(100% - 1rem, 1240px); } .metric-grid, .button-grid, dl div, .range-row { grid-template-columns: 1fr; } .range-row strong { text-align: left; } }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">Xsens / Movella DOT</p>
+          <h1>Running analysis live IMU platform</h1>
+          <p class="lede">Connect three DOT sensors placed on the shank, foot, and hip. All three DOTs stream quaternion orientation with free acceleration. The live view estimates ankle dorsiflexion/plantarflexion and inversion/eversion from the zeroed foot-shank relative quaternion, while hip pitch/roll are estimated from the zeroed hip quaternion.</p>
+        </div>
+        <div class="hero-status" id="browserSupport">Checking browser Bluetooth support...</div>
+      </header>
+
+      <main class="layout">
+        <section class="panel live-panel">
+          <div class="metric-grid">
+            <div><span>Ankle dorsi/plantar flexion</span><strong id="ankleDpPf">--.- deg</strong></div>
+            <div><span>Ankle inversion/eversion</span><strong id="ankleInvEv">--.- deg</strong></div>
+            <div><span>Hip flexion/extension</span><strong id="torsoPitch">--.- deg</strong></div>
+            <div><span>Hip rotation</span><strong id="torsoRoll">--.- deg</strong></div>
+            <div><span>Shank battery</span><strong id="shankBatteryMetric" class="battery-value">--</strong></div>
+            <div><span>Foot battery</span><strong id="footBatteryMetric" class="battery-value">--</strong></div>
+            <div><span>Hip battery</span><strong id="hipBatteryMetric" class="battery-value">--</strong></div>
+          </div>
+          <canvas id="angleChart" width="900" height="300" aria-label="running angle chart"></canvas>
+
+          <section class="logging-bar" aria-labelledby="loggingTitle">
+            <div class="logging-header">
+              <div>
+                <h2 id="loggingTitle">Logging and testing</h2>
+                <p class="hint">Choose a folder when supported, name the CSV, then save directly.</p>
+              </div>
+              <p class="status-pill inline-status" id="logStatus" hidden></p>
+            </div>
+            <div class="logging-form">
+              <div class="control-row"><label for="sessionNameInput">Session / participant name</label><input id="sessionNameInput" type="text" placeholder="e.g. P01_run_trial_01" autocomplete="off" /></div>
+              <div class="control-row"><label for="fileNameInput">CSV file name</label><input id="fileNameInput" type="text" autocomplete="off" /></div>
+            </div>
+            <div class="button-grid logging-actions">
+              <button id="logBtn" type="button">Start CSV logging</button>
+              <button id="chooseFolderBtn" type="button" class="secondary">Choose save folder</button>
+              <button id="downloadBtn" type="button" class="secondary">Save CSV</button>
+              <button id="mockBtn" type="button" class="secondary">Start mock stream</button>
+              <button id="clearBtn" type="button" class="secondary">Clear chart</button>
+            </div>
+            <p class="hint" id="folderStatus">No folder selected. Save CSV will use the browser download flow.</p>
+          </section>
+
+          <section class="analysis-bar" aria-labelledby="analysisTitle">
+            <div class="logging-header analysis-header">
+              <div>
+                <h2 id="analysisTitle">Running gait analysis</h2>
+                <p class="hint">Load a saved/current CSV and detect foot-contact-to-foot-contact cycles from ankle angle, then estimate toe-off and ground contact time from ankle-angle features. Cadence is single-foot steps/min without doubling.</p>
+              </div>
+              <p class="status-pill inline-status analysis-status" id="analysisStatus" aria-live="polite" hidden></p>
+            </div>
+            <div class="analysis-form">
+              <div class="control-row file-control"><label for="analysisFileInput">Saved CSV file</label><input id="analysisFileInput" type="file" accept=".csv,text/csv" /></div>
+              <div class="control-row"><label for="analysisAngleSelect">GCT detection signal</label><select id="analysisAngleSelect"><option value="ankle_dorsiflexion_plantarflexion_deg" selected>Ankle dorsi/plantar flexion</option><option value="ankle_inversion_eversion_deg">Ankle inversion/eversion</option><option value="foot_quaternion_angular_velocity_deg_s">Foot angular velocity</option><option value="torso_pitch_deg">Hip flexion/extension</option><option value="torso_roll_deg">Hip rotation</option></select></div>
+              <div class="control-row"><label for="contactPolaritySelect">Foot-contact feature</label><select id="contactPolaritySelect"><option value="min" selected>Local minimum</option><option value="max">Local maximum</option></select></div>
+              <div class="control-row"><label for="toeOffPolaritySelect">Toe-off feature</label><select id="toeOffPolaritySelect"><option value="max" selected>Local maximum</option><option value="min">Local minimum</option></select></div>
+              <div class="control-row"><label for="analysisSmoothingInput">Analysis smoothing window (samples)</label><input id="analysisSmoothingInput" type="number" min="1" max="101" step="2" value="9" /></div>
+              <div class="control-row"><label for="minStepIntervalInput">Minimum contact interval (s)</label><input id="minStepIntervalInput" type="number" min="0.15" max="2" step="0.05" value="0.45" /></div>
+              <div class="control-row"><label for="contactProminenceInput">Minimum contact prominence</label><input id="contactProminenceInput" type="number" min="0" max="500" step="0.5" value="3" /></div>
+              <div class="control-row"><label for="minToeOffDelayInput">Minimum toe-off delay after contact (s)</label><input id="minToeOffDelayInput" type="number" min="0.03" max="0.50" step="0.01" value="0.08" /></div>
+              <div class="control-row"><label for="maxToeOffFractionInput">Max toe-off search window (% cycle)</label><input id="maxToeOffFractionInput" type="number" min="20" max="90" step="5" value="65" /></div>
+              <div class="control-row"><label for="toeOffProminenceInput">Minimum toe-off prominence</label><input id="toeOffProminenceInput" type="number" min="0" max="500" step="0.5" value="2" /></div>
+              <div class="control-row"><label for="accelSmoothingInput">Acceleration smoothing window (samples)</label><input id="accelSmoothingInput" type="number" min="1" max="9" step="2" value="3" /></div>
+            </div>
+            <div class="button-grid analysis-actions">
+              <button id="analyzeFileBtn" type="button">Analyze selected CSV</button>
+              <button id="analyzeCurrentLogBtn" type="button" class="secondary">Analyze current log</button>
+              <button id="exportAnalysisBtn" type="button" class="secondary" disabled>Save analysis CSV</button>
+            </div>
+            <div class="analysis-summary" id="analysisSummary" aria-live="polite"></div>
+            <div class="analysis-figure">
+              <div class="analysis-figure-header">
+                <h3>Foot-contact detection sanity check</h3>
+                <p class="hint">Smoothed ankle-angle signal with accepted contacts and toe-offs. Adjust features, smoothing, intervals, and prominence, then re-run analysis.</p>
+              </div>
+              <canvas id="contactChart" class="analysis-contact-chart" width="900" height="320" aria-label="foot contact detection graph"></canvas>
+              <p class="hint">Red vertical lines show accepted foot-contact events. Purple vertical lines show estimated toe-offs. Darker shaded regions show estimated ground contact time; lighter bands show full foot-contact-to-foot-contact cycles.</p>
+            </div>
+            <div class="analysis-table-wrap">
+              <table class="analysis-table" id="analysisTable">
+                <thead><tr><th>Cycle</th><th>Contact</th><th>Toe-off</th><th>Next contact</th><th>GCT</th><th>GCT %</th><th>Cycle duration</th><th>Single-foot cadence</th><th>Peak shank free acc. 0-50 ms</th><th>Time to peak</th><th>Ankle DP/PF stance ROM</th><th>Ankle DP/PF swing ROM</th><th>Ankle INV/EV stance ROM</th><th>Ankle INV/EV swing ROM</th><th>Hip flex/ext stance ROM</th><th>Hip flex/ext swing ROM</th><th>Hip rotation stance ROM</th><th>Hip rotation swing ROM</th></tr></thead>
+                <tbody><tr><td colspan="18">Analyze a CSV to detect foot-contact-to-foot-contact cycles, ground contact time, acceleration metrics, and stance/swing ROM.</td></tr></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section class="panel controls-panel">
+          <h2>Setup</h2>
+          <div class="axis-grid">
+            <div class="control-row"><label for="sagittalAxisSelect">Sagittal / pitch axis</label><select id="sagittalAxisSelect"><option value="y" selected>Y / pitch</option><option value="x">X</option><option value="z">Z</option></select></div>
+            <div class="control-row"><label for="frontalAxisSelect">Frontal / roll axis</label><select id="frontalAxisSelect"><option value="x" selected>X / roll</option><option value="y">Y</option><option value="z">Z</option></select></div>
+          </div>
+          <div class="control-row"><label for="smoothingRange">Angle smoothing</label><div class="range-row"><input id="smoothingRange" type="range" min="0" max="95" step="5" value="70" /><strong id="smoothingValue">70%</strong></div><p class="hint">Higher smoothing reduces jitter but adds delay. Relative joint angles use circular wrapping correction to avoid +/-180 deg jumps.</p></div>
+          <label class="checkbox-row"><input id="invertDpPf" type="checkbox" /> Invert ankle dorsi/plantar flexion sign</label>
+          <label class="checkbox-row"><input id="invertInvEv" type="checkbox" /> Invert ankle inversion/eversion sign</label>
+          <label class="checkbox-row"><input id="invertTorsoPitch" type="checkbox" /> Invert hip flexion/extension sign</label>
+          <label class="checkbox-row"><input id="invertTorsoRoll" type="checkbox" /> Invert hip rotation sign</label>
+          <label class="checkbox-row"><input id="autoStart" type="checkbox" checked /> Start streaming after connection</label>
+          <div class="button-grid">
+            <button id="calibrateBtn" type="button">Calibrate zero</button>
+            <button id="resetZeroBtn" type="button">Reset zero</button>
+            <button id="resetFilterBtn" type="button" class="secondary">Reset filter</button>
+            <button id="startAllBtn" type="button">Start all</button>
+            <button id="stopAllBtn" type="button" class="secondary">Stop all</button>
+          </div>
+          <p class="hint">Place the participant in the reference posture, then click <strong>Calibrate zero</strong>. For running, quiet standing neutral is a good first reference.</p>
+        </section>
+
+        <section class="sensor-card panel" data-segment="shank">
+          <div class="sensor-header"><div><p class="eyebrow">Sensor 1</p><h2>Shank DOT</h2></div><span class="status-pill" id="shankStatus">Disconnected</span></div>
+          <dl><div><dt>Name</dt><dd id="shankName">--</dd></div><div><dt>Sensor timestamp</dt><dd id="shankTs">--</dd></div><div><dt>Quaternion w/x/y/z</dt><dd id="shankEuler">--</dd></div><div><dt>Battery</dt><dd id="shankBattery" class="battery-value">--</dd></div></dl>
+          <div class="button-grid"><button id="connectShankBtn" type="button">Connect shank</button><button id="startShankBtn" type="button">Start</button><button id="stopShankBtn" type="button" class="secondary">Stop</button></div>
+        </section>
+
+        <section class="sensor-card panel" data-segment="foot">
+          <div class="sensor-header"><div><p class="eyebrow">Sensor 2</p><h2>Foot DOT</h2></div><span class="status-pill" id="footStatus">Disconnected</span></div>
+          <dl><div><dt>Name</dt><dd id="footName">--</dd></div><div><dt>Sensor timestamp</dt><dd id="footTs">--</dd></div><div><dt>Quaternion w/x/y/z</dt><dd id="footEuler">--</dd></div><div><dt>Battery</dt><dd id="footBattery" class="battery-value">--</dd></div></dl>
+          <div class="button-grid"><button id="connectFootBtn" type="button">Connect foot</button><button id="startFootBtn" type="button">Start</button><button id="stopFootBtn" type="button" class="secondary">Stop</button></div>
+        </section>
+
+        <section class="sensor-card panel" data-segment="hip">
+          <div class="sensor-header"><div><p class="eyebrow">Sensor 3</p><h2>Hip DOT</h2></div><span class="status-pill" id="hipStatus">Disconnected</span></div>
+          <dl><div><dt>Name</dt><dd id="hipName">--</dd></div><div><dt>Sensor timestamp</dt><dd id="hipTs">--</dd></div><div><dt>Quaternion w/x/y/z</dt><dd id="hipEuler">--</dd></div><div><dt>Battery</dt><dd id="hipBattery" class="battery-value">--</dd></div></dl>
+          <div class="button-grid"><button id="connectHipBtn" type="button">Connect hip</button><button id="startHipBtn" type="button">Start</button><button id="stopHipBtn" type="button" class="secondary">Stop</button></div>
+        </section>
+      </main>
+    </div>
+
+    <script>
+window.addEventListener('error', (event) => {
+  const box = document.getElementById('browserSupport');
+  if (box) { box.textContent = 'App script error: ' + (event.message || 'unknown error'); box.dataset.state = 'error'; }
+});
+window.addEventListener('unhandledrejection', (event) => {
+  const box = document.getElementById('browserSupport');
+  if (box) { const reason = event.reason && (event.reason.message || String(event.reason)); box.textContent = 'App async error: ' + (reason || 'unknown error'); box.dataset.state = 'error'; }
+});
+
+const UUIDS = Object.freeze({
+  configurationService: '15171000-4947-11e9-8646-d663bd873d93',
+  measurementService: '15172000-4947-11e9-8646-d663bd873d93',
+  batteryService: '15173000-4947-11e9-8646-d663bd873d93',
+  measurementControl: '15172001-4947-11e9-8646-d663bd873d93',
+  mediumPayload: '15172003-4947-11e9-8646-d663bd873d93',
+  shortPayload: '15172004-4947-11e9-8646-d663bd873d93',
+  batteryCharacteristic: '15173001-4947-11e9-8646-d663bd873d93',
+});
+const PAYLOAD_MODE = Object.freeze({ ORIENTATION_EULER: 4, ORIENTATION_QUATERNION: 5, COMPLETE_QUATERNION: 3 });
+const BATTERY_POLL_INTERVAL_MS = 60000;
+const SEGMENTS = ['shank', 'foot', 'hip'];
+function browserSupportsWebBluetooth() { return typeof navigator !== 'undefined' && Boolean(navigator.bluetooth); }
+function asDataView(value) { if (value instanceof DataView) return value; if (value instanceof ArrayBuffer) return new DataView(value); if (ArrayBuffer.isView(value)) return new DataView(value.buffer, value.byteOffset, value.byteLength); throw new Error('Expected a DataView, ArrayBuffer, or typed array.'); }
+function nowMs() { return typeof performance !== 'undefined' && typeof performance.now === 'function' ? performance.now() : Date.now(); }
+function parseOrientationEuler(value) { const view = asDataView(value); if (view.byteLength < 16) throw new Error('Orientation Euler payload must be at least 16 bytes; received ' + view.byteLength + '.'); return { timestampUs: view.getUint32(0, true), euler: { x: view.getFloat32(4, true), y: view.getFloat32(8, true), z: view.getFloat32(12, true) }, receivedAtMs: nowMs(), payloadMode: 'euler' }; }
+function parseOrientationQuaternion(value) { const view = asDataView(value); if (view.byteLength < 20) throw new Error('Orientation Quaternion payload must be at least 20 bytes; received ' + view.byteLength + '.'); return { timestampUs: view.getUint32(0, true), quaternion: { w: view.getFloat32(4, true), x: view.getFloat32(8, true), y: view.getFloat32(12, true), z: view.getFloat32(16, true) }, receivedAtMs: nowMs(), payloadMode: 'quaternion' }; }
+function parseCompleteQuaternion(value) { const view = asDataView(value); if (view.byteLength < 32) throw new Error('Complete Quaternion payload must be at least 32 bytes; received ' + view.byteLength + '.'); const freeAcceleration = { x: view.getFloat32(20, true), y: view.getFloat32(24, true), z: view.getFloat32(28, true) }; return { timestampUs: view.getUint32(0, true), quaternion: { w: view.getFloat32(4, true), x: view.getFloat32(8, true), y: view.getFloat32(12, true), z: view.getFloat32(16, true) }, freeAcceleration, freeAccelerationResultant: Math.hypot(freeAcceleration.x, freeAcceleration.y, freeAcceleration.z), receivedAtMs: nowMs(), payloadMode: 'complete_quaternion' }; }
+function parseBatteryStatus(value) { const view = asDataView(value); if (view.byteLength < 2) throw new Error('Battery payload must be 2 bytes; received ' + view.byteLength + '.'); const levelPercent = view.getUint8(0); const chargingStatus = view.getUint8(1); return { levelPercent, chargingStatus, isCharging: chargingStatus === 1, receivedAtMs: nowMs() }; }
+async function writeCharacteristic(characteristic, bytes) { const value = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes); if (typeof characteristic.writeValueWithResponse === 'function') await characteristic.writeValueWithResponse(value); else await characteristic.writeValue(value); }
+
+class XsensDotDevice extends EventTarget {
+  constructor(segmentLabel) { super(); this.segmentLabel = segmentLabel; this.device = null; this.server = null; this.controlCharacteristic = null; this.payloadCharacteristic = null; this.batteryCharacteristic = null; this.latestSample = null; this.latestBattery = null; this.connected = false; this.streaming = false; this._batteryPollTimer = null; this._onNotification = this._onNotification.bind(this); this._onBatteryNotification = this._onBatteryNotification.bind(this); this._onDisconnected = this._onDisconnected.bind(this); }
+  get name() { return this.device?.name ?? 'Unnamed DOT'; }
+  async requestAndConnect() { if (!browserSupportsWebBluetooth()) throw new Error('Web Bluetooth is not available in this browser. Use Chrome or Edge over HTTPS/localhost.'); const device = await navigator.bluetooth.requestDevice({ filters: [{ namePrefix: 'Movella' }, { namePrefix: 'Xsens' }], optionalServices: [UUIDS.measurementService, UUIDS.configurationService, UUIDS.batteryService] }); await this.connect(device); return this; }
+  async connect(device = this.device) { if (!device) throw new Error('No Bluetooth device selected.'); this.device = device; this.device.removeEventListener('gattserverdisconnected', this._onDisconnected); this.device.addEventListener('gattserverdisconnected', this._onDisconnected); this.server = await this.device.gatt.connect(); const measurementService = await this.server.getPrimaryService(UUIDS.measurementService); this.controlCharacteristic = await measurementService.getCharacteristic(UUIDS.measurementControl); this.payloadCharacteristic = await measurementService.getCharacteristic(UUIDS.mediumPayload); this.connected = true; this.dispatchEvent(new CustomEvent('status', { detail: this.statusDetail('connected') })); await this._setupBatteryMonitoring(); }
+  async startStreaming() { if (!this.connected || !this.payloadCharacteristic || !this.controlCharacteristic) throw new Error(this.segmentLabel + ' DOT is not connected.'); this.payloadCharacteristic.removeEventListener('characteristicvaluechanged', this._onNotification); this.payloadCharacteristic.addEventListener('characteristicvaluechanged', this._onNotification); await this.payloadCharacteristic.startNotifications(); await writeCharacteristic(this.controlCharacteristic, [0x01, 0x01, PAYLOAD_MODE.COMPLETE_QUATERNION]); this.streaming = true; this.dispatchEvent(new CustomEvent('status', { detail: this.statusDetail('streaming') })); }
+  async stopStreaming() { if (!this.controlCharacteristic) return; await writeCharacteristic(this.controlCharacteristic, [0x01, 0x00, 0x00]); if (this.payloadCharacteristic) { try { await this.payloadCharacteristic.stopNotifications(); } catch {} this.payloadCharacteristic.removeEventListener('characteristicvaluechanged', this._onNotification); } this.streaming = false; this.dispatchEvent(new CustomEvent('status', { detail: this.statusDetail('connected') })); }
+  async refreshBattery() { if (!this.connected || !this.batteryCharacteristic) throw new Error(this.segmentLabel + ' DOT battery characteristic is not available.'); const value = await this.batteryCharacteristic.readValue(); const battery = parseBatteryStatus(value); this.latestBattery = battery; this.dispatchEvent(new CustomEvent('battery', { detail: { segment: this.segmentLabel, battery, available: true, device: this } })); return battery; }
+  async disconnect() { await this.stopStreaming(); await this._stopBatteryMonitoring(); this.device?.gatt?.disconnect(); this.connected = false; this.streaming = false; this.latestBattery = null; this.dispatchEvent(new CustomEvent('status', { detail: this.statusDetail('disconnected') })); this.dispatchEvent(new CustomEvent('battery', { detail: { segment: this.segmentLabel, battery: null, available: false, device: this } })); }
+  statusDetail(state) { return { segment: this.segmentLabel, state, name: this.name, connected: this.connected, streaming: this.streaming, battery: this.latestBattery }; }
+  async _setupBatteryMonitoring() { await this._stopBatteryMonitoring(); try { const batteryService = await this.server.getPrimaryService(UUIDS.batteryService); this.batteryCharacteristic = await batteryService.getCharacteristic(UUIDS.batteryCharacteristic); this.batteryCharacteristic.removeEventListener('characteristicvaluechanged', this._onBatteryNotification); this.batteryCharacteristic.addEventListener('characteristicvaluechanged', this._onBatteryNotification); await this.refreshBattery(); try { await this.batteryCharacteristic.startNotifications(); } catch {} this._batteryPollTimer = window.setInterval(() => { this.refreshBattery().catch(() => {}); }, BATTERY_POLL_INTERVAL_MS); } catch (error) { this.latestBattery = null; this.batteryCharacteristic = null; this.dispatchEvent(new CustomEvent('battery', { detail: { segment: this.segmentLabel, battery: null, available: false, error, device: this } })); } }
+  async _stopBatteryMonitoring() { if (this._batteryPollTimer) window.clearInterval(this._batteryPollTimer); this._batteryPollTimer = null; if (this.batteryCharacteristic) { try { await this.batteryCharacteristic.stopNotifications(); } catch {} this.batteryCharacteristic.removeEventListener('characteristicvaluechanged', this._onBatteryNotification); } }
+  _onNotification(event) { try { const sample = parseCompleteQuaternion(event.target.value); this.latestSample = sample; this.dispatchEvent(new CustomEvent('sample', { detail: { segment: this.segmentLabel, sample, device: this } })); } catch (error) { this.dispatchEvent(new CustomEvent('error', { detail: error })); } }
+  _onBatteryNotification(event) { try { const battery = parseBatteryStatus(event.target.value); this.latestBattery = battery; this.dispatchEvent(new CustomEvent('battery', { detail: { segment: this.segmentLabel, battery, available: true, device: this } })); } catch (error) { this.dispatchEvent(new CustomEvent('error', { detail: error })); } }
+  _onDisconnected() { this.connected = false; this.streaming = false; this.latestBattery = null; this._stopBatteryMonitoring().catch(() => {}); this.dispatchEvent(new CustomEvent('status', { detail: this.statusDetail('disconnected') })); this.dispatchEvent(new CustomEvent('battery', { detail: { segment: this.segmentLabel, battery: null, available: false, device: this } })); }
+}
+
+function normalizeDeg(angleDeg) { if (!Number.isFinite(angleDeg)) return NaN; return ((((angleDeg + 180) % 360) + 360) % 360) - 180; }
+function circularDifferenceDeg(aDeg, bDeg) { return normalizeDeg(aDeg - bDeg); }
+function clamp(value, min, max) { return Math.min(max, Math.max(min, value)); }
+// Circular low-pass filtering prevents jumps when an angle crosses the +/-180 deg boundary.
+function lowPassAngle(previous, next, smoothingPercent) { if (!Number.isFinite(next)) return previous; if (!Number.isFinite(previous) || smoothingPercent <= 0) return next; const alpha = 1 - smoothingPercent / 100; const delta = circularDifferenceDeg(next, previous); return normalizeDeg(previous + alpha * delta); }
+function quatNormalize(q) { if (!q) return null; const n = Math.hypot(q.w, q.x, q.y, q.z); if (!Number.isFinite(n) || n <= 0) return null; return { w: q.w / n, x: q.x / n, y: q.y / n, z: q.z / n }; }
+function quatConjugate(q) { return { w: q.w, x: -q.x, y: -q.y, z: -q.z }; }
+function quatMultiply(a, b) { return { w: a.w*b.w - a.x*b.x - a.y*b.y - a.z*b.z, x: a.w*b.x + a.x*b.w + a.y*b.z - a.z*b.y, y: a.w*b.y - a.x*b.z + a.y*b.w + a.z*b.x, z: a.w*b.z + a.x*b.y - a.y*b.x + a.z*b.w }; }
+function quatRelative(reference, current) { const ref = quatNormalize(reference); const cur = quatNormalize(current); if (!ref || !cur) return null; return quatNormalize(quatMultiply(quatConjugate(ref), cur)); }
+function quatToRotationVectorDeg(q) { const unit = quatNormalize(q); if (!unit) return null; const sign = unit.w < 0 ? -1 : 1; const w = clamp(unit.w * sign, -1, 1); const x = unit.x * sign; const y = unit.y * sign; const z = unit.z * sign; const angle = 2 * Math.acos(w); const sinHalf = Math.sqrt(Math.max(0, 1 - w*w)); if (sinHalf < 1e-6) return { x: x * 2 * 180 / Math.PI, y: y * 2 * 180 / Math.PI, z: z * 2 * 180 / Math.PI }; const scale = angle / sinHalf * 180 / Math.PI; return { x: x * scale, y: y * scale, z: z * scale }; }
+function quatToEulerDeg(q) { const unit = quatNormalize(q); if (!unit) return null; const { w, x, y, z } = unit; const sinr_cosp = 2 * (w*x + y*z); const cosr_cosp = 1 - 2 * (x*x + y*y); const roll = Math.atan2(sinr_cosp, cosr_cosp); const sinp = 2 * (w*y - z*x); const pitch = Math.abs(sinp) >= 1 ? Math.sign(sinp) * Math.PI/2 : Math.asin(sinp); const siny_cosp = 2 * (w*z + x*y); const cosy_cosp = 1 - 2 * (y*y + z*z); const yaw = Math.atan2(siny_cosp, cosy_cosp); return { x: roll * 180 / Math.PI, y: pitch * 180 / Math.PI, z: yaw * 180 / Math.PI }; }
+
+class RunningAngleEstimator {
+  constructor() {
+    this.sagittalAxis = 'y';
+    this.frontalAxis = 'x';
+    this.smoothingPercent = 70;
+    this.inverted = { dpPf: false, invEv: false, torsoPitch: false, torsoRoll: false };
+    this.zeroOffsets = { dpPf: 0, invEv: 0, torsoPitch: 0, torsoRoll: 0 };
+    this.filtered = { dpPf: null, invEv: null, torsoPitch: null, torsoRoll: null };
+    this.latest = { shank: null, foot: null, hip: null };
+    this.ankleZeroQuaternion = null;
+    this.hipZeroQuaternion = null;
+  }
+  update(segment, sample) { if (!SEGMENTS.includes(segment)) throw new Error('Invalid segment: ' + segment); this.latest[segment] = sample; this._updateFilter(); }
+  setAxes(sagittalAxis, frontalAxis) { this.sagittalAxis = sagittalAxis; this.frontalAxis = frontalAxis; this.resetFilterToCurrent(); }
+  setSmoothingPercent(percent) { this.smoothingPercent = clamp(Number(percent) || 0, 0, 95); this.resetFilterToCurrent(); }
+  setInverted(key, value) { this.inverted[key] = Boolean(value); this.resetFilterToCurrent(); }
+  get readyAnkle() { return Boolean(this.latest.shank?.quaternion && this.latest.foot?.quaternion); }
+  get readyTorso() { return Boolean(this.latest.hip?.quaternion); }
+  get ankleRelativeQuaternion() {
+    if (!this.readyAnkle) return null;
+    const shank = quatNormalize(this.latest.shank.quaternion);
+    const foot = quatNormalize(this.latest.foot.quaternion);
+    if (!shank || !foot) return null;
+    return quatNormalize(quatMultiply(quatConjugate(shank), foot));
+  }
+  get ankleRotationVectorDeg() {
+    const currentRelative = this.ankleRelativeQuaternion;
+    if (!currentRelative) return null;
+    const reference = this.ankleZeroQuaternion || { w: 1, x: 0, y: 0, z: 0 };
+    return quatToRotationVectorDeg(quatRelative(reference, currentRelative));
+  }
+  get hipRotationVectorDeg() {
+    if (!this.readyTorso) return null;
+    const reference = this.hipZeroQuaternion || { w: 1, x: 0, y: 0, z: 0 };
+    return quatToRotationVectorDeg(quatRelative(reference, this.latest.hip.quaternion));
+  }
+  get rawDpPfDeg() { const rv = this.ankleRotationVectorDeg; return rv ? rv[this.sagittalAxis] : null; }
+  get rawInvEvDeg() { const rv = this.ankleRotationVectorDeg; return rv ? rv[this.frontalAxis] : null; }
+  get rawTorsoPitchDeg() { const rv = this.hipRotationVectorDeg; return rv ? rv[this.sagittalAxis] : null; }
+  get rawTorsoRollDeg() { const rv = this.hipRotationVectorDeg; return rv ? rv[this.frontalAxis] : null; }
+  _zeroed(key, raw) { if (!Number.isFinite(raw)) return null; const zeroed = circularDifferenceDeg(raw, this.zeroOffsets[key]); return this.inverted[key] ? -zeroed : zeroed; }
+  get unfilteredDpPfDeg() { return this._zeroed('dpPf', this.rawDpPfDeg); }
+  get unfilteredInvEvDeg() { return this._zeroed('invEv', this.rawInvEvDeg); }
+  get unfilteredTorsoPitchDeg() { return this._zeroed('torsoPitch', this.rawTorsoPitchDeg); }
+  get unfilteredTorsoRollDeg() { return this._zeroed('torsoRoll', this.rawTorsoRollDeg); }
+  get ankleDpPfDeg() { return Number.isFinite(this.filtered.dpPf) ? this.filtered.dpPf : this.unfilteredDpPfDeg; }
+  get ankleInvEvDeg() { return Number.isFinite(this.filtered.invEv) ? this.filtered.invEv : this.unfilteredInvEvDeg; }
+  get torsoPitchDeg() { return Number.isFinite(this.filtered.torsoPitch) ? this.filtered.torsoPitch : this.unfilteredTorsoPitchDeg; }
+  get torsoRollDeg() { return Number.isFinite(this.filtered.torsoRoll) ? this.filtered.torsoRoll : this.unfilteredTorsoRollDeg; }
+  calibrateZero() {
+    if (this.ankleRelativeQuaternion) this.ankleZeroQuaternion = quatNormalize(this.ankleRelativeQuaternion);
+    if (this.latest.hip?.quaternion) this.hipZeroQuaternion = quatNormalize(this.latest.hip.quaternion);
+    this.zeroOffsets = { dpPf: 0, invEv: 0, torsoPitch: 0, torsoRoll: 0 };
+    this.resetFilterToCurrent();
+    return this.zeroOffsets;
+  }
+  resetZero() { this.zeroOffsets = { dpPf: 0, invEv: 0, torsoPitch: 0, torsoRoll: 0 }; this.ankleZeroQuaternion = null; this.hipZeroQuaternion = null; this.resetFilterToCurrent(); }
+  resetFilterToCurrent() { this.filtered.dpPf = this.unfilteredDpPfDeg; this.filtered.invEv = this.unfilteredInvEvDeg; this.filtered.torsoPitch = this.unfilteredTorsoPitchDeg; this.filtered.torsoRoll = this.unfilteredTorsoRollDeg; }
+  _updateFilter() { this.filtered.dpPf = lowPassAngle(this.filtered.dpPf, this.unfilteredDpPfDeg, this.smoothingPercent); this.filtered.invEv = lowPassAngle(this.filtered.invEv, this.unfilteredInvEvDeg, this.smoothingPercent); this.filtered.torsoPitch = lowPassAngle(this.filtered.torsoPitch, this.unfilteredTorsoPitchDeg, this.smoothingPercent); this.filtered.torsoRoll = lowPassAngle(this.filtered.torsoRoll, this.unfilteredTorsoRollDeg, this.smoothingPercent); }
+}
+
+class MultiLineChart {
+  constructor(canvas, { maxPoints = 600 } = {}) { this.canvas = canvas; this.ctx = canvas.getContext('2d'); this.maxPoints = maxPoints; this.points = []; this.series = [ { key: 'dpPf', label: 'Ankle DP/PF' }, { key: 'invEv', label: 'Ankle INV/EV' }, { key: 'torsoPitch', label: 'Hip flexion/extension' }, { key: 'torsoRoll', label: 'Hip rotation' } ]; this.resize(); window.addEventListener('resize', () => this.resize()); }
+  resize() { const rect = this.canvas.getBoundingClientRect(); const dpr = window.devicePixelRatio || 1; const width = Math.max(300, rect.width || this.canvas.width); const height = Math.max(220, rect.height || this.canvas.height); this.canvas.width = Math.floor(width * dpr); this.canvas.height = Math.floor(height * dpr); this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0); this.draw(); }
+  clear() { this.points = []; this.draw(); }
+  push(values) { if (!values || !Object.values(values).some(Number.isFinite)) return; this.points.push({ t: performance.now(), ...values }); if (this.points.length > this.maxPoints) this.points.splice(0, this.points.length - this.maxPoints); this.draw(); }
+  draw() { const ctx = this.ctx; const width = this.canvas.clientWidth || 900; const height = this.canvas.clientHeight || 300; const pad = { left: 52, right: 18, top: 18, bottom: 48 }; const plotW = width - pad.left - pad.right; const plotH = height - pad.top - pad.bottom; ctx.clearRect(0,0,width,height); ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,width,height); ctx.strokeStyle = '#d6dde8'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(pad.left,pad.top); ctx.lineTo(pad.left,pad.top+plotH); ctx.lineTo(pad.left+plotW,pad.top+plotH); ctx.stroke(); if (this.points.length < 2) { ctx.fillStyle = '#6b7280'; ctx.font = '14px system-ui, sans-serif'; ctx.fillText('Waiting for live running data...', pad.left + 10, pad.top + 28); return; }
+    const ys = []; for (const p of this.points) for (const s of this.series) if (Number.isFinite(p[s.key])) ys.push(p[s.key]); let minY = Math.min(...ys, -20); let maxY = Math.max(...ys, 20); if (Math.abs(maxY-minY) < 10) { const mid = (maxY+minY)/2; minY = mid-5; maxY = mid+5; } const yPad = (maxY-minY)*0.12; minY -= yPad; maxY += yPad; const minT = this.points[0].t; const maxT = this.points[this.points.length-1].t; const span = Math.max(1, maxT-minT); const x = (t) => pad.left + ((t-minT)/span)*plotW; const y = (v) => pad.top + (1 - (v-minY)/(maxY-minY))*plotH;
+    ctx.strokeStyle = '#eef2f7'; ctx.beginPath(); for (let i=0;i<=4;i++) { const yy = pad.top + (plotH*i)/4; ctx.moveTo(pad.left,yy); ctx.lineTo(pad.left+plotW,yy); } ctx.stroke();
+    const colors = ['#1f6feb', '#16a34a', '#f97316', '#7c3aed'];
+    this.series.forEach((s, si) => { ctx.strokeStyle = colors[si]; ctx.lineWidth = 2; ctx.beginPath(); let started = false; for (const p of this.points) { const value = p[s.key]; if (!Number.isFinite(value)) continue; if (!started) { ctx.moveTo(x(p.t), y(value)); started = true; } else ctx.lineTo(x(p.t), y(value)); } if (started) ctx.stroke(); });
+    ctx.fillStyle = '#374151'; ctx.font = '12px system-ui, sans-serif'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; for (let i=0;i<=4;i++) { const value = maxY - ((maxY-minY)*i)/4; ctx.fillText(value.toFixed(0) + ' deg', pad.left - 8, pad.top + (plotH*i)/4); }
+    let legendX = pad.left; const legendY = height - 18; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; this.series.forEach((s, si) => { ctx.strokeStyle = colors[si]; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(legendX, legendY); ctx.lineTo(legendX+18, legendY); ctx.stroke(); ctx.fillStyle = '#475569'; ctx.fillText(s.label, legendX+24, legendY); legendX += ctx.measureText(s.label).width + 52; });
+  }
+}
+
+class GaitContactChart {
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.result = null;
+    this.message = 'Analyze a CSV to show foot-contact detection.';
+    this.resize();
+    window.addEventListener('resize', () => this.resize());
+  }
+  resize() {
+    const rect = this.canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    const width = Math.max(320, rect.width || this.canvas.width);
+    const height = Math.max(240, rect.height || this.canvas.height);
+    this.canvas.width = Math.floor(width * dpr);
+    this.canvas.height = Math.floor(height * dpr);
+    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    this.draw();
+  }
+  clear(message = 'Analyze a CSV to show foot-contact detection.') {
+    this.result = null;
+    this.message = message;
+    this.draw();
+  }
+  render(result) {
+    this.result = result;
+    this.message = '';
+    this.draw();
+  }
+  draw() {
+    const ctx = this.ctx;
+    const width = this.canvas.clientWidth || 900;
+    const height = this.canvas.clientHeight || 320;
+    const pad = { left: 56, right: 18, top: 20, bottom: 50 };
+    const plotW = width - pad.left - pad.right;
+    const plotH = height - pad.top - pad.bottom;
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, width, height);
+    ctx.strokeStyle = '#d6dde8';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(pad.left, pad.top);
+    ctx.lineTo(pad.left, pad.top + plotH);
+    ctx.lineTo(pad.left + plotW, pad.top + plotH);
+    ctx.stroke();
+    if (!this.result || !Array.isArray(this.result.sampleSeries) || this.result.sampleSeries.length < 2) {
+      ctx.fillStyle = '#6b7280';
+      ctx.font = '14px system-ui, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(this.message || 'No analysis result to display.', pad.left + 10, pad.top + 28);
+      return;
+    }
+    const samples = this.result.sampleSeries;
+    const values = samples.map(s => s.smoothValue).filter(Number.isFinite);
+    let minY = Math.min(...values), maxY = Math.max(...values);
+    if (Math.abs(maxY - minY) < 1) { const mid = (minY + maxY) / 2; minY = mid - 0.5; maxY = mid + 0.5; }
+    const yPad = (maxY - minY) * 0.12; minY -= yPad; maxY += yPad;
+    const minT = samples[0].timeSec;
+    const maxT = samples[samples.length - 1].timeSec;
+    const span = Math.max(0.001, maxT - minT);
+    const x = t => pad.left + ((t - minT) / span) * plotW;
+    const y = v => pad.top + (1 - (v - minY) / (maxY - minY)) * plotH;
+    ctx.strokeStyle = '#eef2f7';
+    ctx.beginPath();
+    for (let i = 0; i <= 4; i++) { const yy = pad.top + (plotH * i) / 4; ctx.moveTo(pad.left, yy); ctx.lineTo(pad.left + plotW, yy); }
+    for (let i = 0; i <= 5; i++) { const xx = pad.left + (plotW * i) / 5; ctx.moveTo(xx, pad.top); ctx.lineTo(xx, pad.top + plotH); }
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(148, 163, 184, 0.10)';
+    for (const cycle of this.result.cycles || []) {
+      const x1 = x(cycle.startTimeSec);
+      const x2 = x(cycle.endTimeSec);
+      ctx.fillRect(x1, pad.top, Math.max(0, x2 - x1), plotH);
+    }
+    ctx.fillStyle = 'rgba(124, 58, 237, 0.16)';
+    for (const cycle of this.result.cycles || []) {
+      if (!Number.isFinite(cycle.toeOffTimeSec)) continue;
+      const x1 = x(cycle.startTimeSec);
+      const x2 = x(cycle.toeOffTimeSec);
+      ctx.fillRect(x1, pad.top, Math.max(0, x2 - x1), plotH);
+    }
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    samples.forEach((p, i) => { if (i === 0) ctx.moveTo(x(p.timeSec), y(p.value)); else ctx.lineTo(x(p.timeSec), y(p.value)); });
+    ctx.stroke();
+    ctx.strokeStyle = '#1f6feb';
+    ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    samples.forEach((p, i) => { if (i === 0) ctx.moveTo(x(p.timeSec), y(p.smoothValue)); else ctx.lineTo(x(p.timeSec), y(p.smoothValue)); });
+    ctx.stroke();
+    for (const contact of this.result.contacts || []) {
+      const cx = x(contact.timeSec), cy = y(contact.value);
+      ctx.save();
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(cx, pad.top);
+      ctx.lineTo(cx, pad.top + plotH);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#ef4444';
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      if (this.result.contactPolarity === 'min') {
+        ctx.moveTo(cx, cy + 12); ctx.lineTo(cx - 10, cy - 7); ctx.lineTo(cx + 10, cy - 7);
+      } else {
+        ctx.moveTo(cx, cy - 12); ctx.lineTo(cx - 10, cy + 7); ctx.lineTo(cx + 10, cy + 7);
+      }
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#ef4444';
+      ctx.font = 'bold 11px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      ctx.fillText('C', cx, Math.max(pad.top + 12, cy - 14));
+      ctx.restore();
+    }
+    for (const toeOff of this.result.toeOffs || []) {
+      if (!Number.isFinite(toeOff.timeSec)) continue;
+      const tx = x(toeOff.timeSec), ty = y(toeOff.value);
+      ctx.save();
+      ctx.strokeStyle = '#7c3aed';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([2, 3]);
+      ctx.beginPath();
+      ctx.moveTo(tx, pad.top);
+      ctx.lineTo(tx, pad.top + plotH);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#7c3aed';
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(tx, ty, 7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = '#7c3aed';
+      ctx.font = 'bold 11px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillText('TO', tx, Math.min(pad.top + plotH - 14, ty + 10));
+      ctx.restore();
+    }
+    ctx.fillStyle = '#374151';
+    ctx.font = '12px system-ui, sans-serif';
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    for (let i=0;i<=4;i++) { const value = maxY - ((maxY-minY)*i)/4; ctx.fillText(value.toFixed(1) + ' ' + (this.result.signalUnit || 'deg'), pad.left - 8, pad.top + (plotH*i)/4); }
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    for (let i=0;i<=5;i++) { const t = minT + (span*i)/5; ctx.fillText(t.toFixed(1) + ' s', pad.left + (plotW*i)/5, pad.top + plotH + 8); }
+    const legend = [
+      { label: 'Raw', color: '#94a3b8' },
+      { label: 'Smooth', color: '#1f6feb' },
+      { label: 'Contact', color: '#ef4444' },
+      { label: 'Toe-off', color: '#7c3aed' },
+      { label: 'GCT', color: '#7c3aed', fill: true },
+    ];
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    let legendX = pad.left;
+    let legendY = height - 18;
+    for (const item of legend) {
+      const labelWidth = ctx.measureText(item.label).width;
+      if (legendX + labelWidth + 64 > width - 12) {
+        legendX = pad.left;
+        legendY -= 18;
+      }
+      if (item.fill) {
+        ctx.fillStyle = 'rgba(124, 58, 237, 0.16)';
+        ctx.fillRect(legendX, legendY - 5, 18, 10);
+      } else {
+        ctx.strokeStyle = item.color;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(legendX, legendY);
+        ctx.lineTo(legendX + 18, legendY);
+        ctx.stroke();
+      }
+      ctx.fillStyle = '#475569';
+      ctx.fillText(item.label, legendX + 24, legendY);
+      legendX += labelWidth + 54;
+    }
+  }
+}
+
+
+
+function clampUnit(value) { return Math.min(1, Math.max(-1, value)); }
+function normalizeQuat(q) {
+  if (!q) return null;
+  const mag = Math.hypot(q.w, q.x, q.y, q.z);
+  if (!Number.isFinite(mag) || mag <= 0) return null;
+  return { w: q.w / mag, x: q.x / mag, y: q.y / mag, z: q.z / mag };
+}
+function inverseQuat(q) { return { w: q.w, x: -q.x, y: -q.y, z: -q.z }; }
+function multiplyQuat(a, b) {
+  return {
+    w: a.w*b.w - a.x*b.x - a.y*b.y - a.z*b.z,
+    x: a.w*b.x + a.x*b.w + a.y*b.z - a.z*b.y,
+    y: a.w*b.y - a.x*b.z + a.y*b.w + a.z*b.x,
+    z: a.w*b.z + a.x*b.y - a.y*b.x + a.z*b.w,
+  };
+}
+function quatAngularSpeedDegS(prevQuat, currentQuat, dtSec) {
+  const q0 = normalizeQuat(prevQuat);
+  const q1 = normalizeQuat(currentQuat);
+  if (!q0 || !q1 || !Number.isFinite(dtSec) || dtSec <= 0) return NaN;
+  const delta = normalizeQuat(multiplyQuat(inverseQuat(q0), q1));
+  if (!delta) return NaN;
+  const angleRad = 2 * Math.acos(clampUnit(Math.abs(delta.w)));
+  return angleRad * 180 / Math.PI / dtSec;
+}
+function displayVariableName(variable) {
+  if (variable === 'foot_quaternion_angular_velocity_deg_s') return 'foot quaternion angular velocity';
+  return String(variable || '').replace(/_/g, ' ');
+}
+function parseCsv(text) { const rows = []; let row = [], field = '', inQuotes = false; const source = String(text || ''); for (let i=0;i<source.length;i++) { const ch = source[i]; if (inQuotes) { if (ch === '"') { if (source[i+1] === '"') { field += '"'; i++; } else inQuotes = false; } else field += ch; continue; } if (ch === '"') inQuotes = true; else if (ch === ',') { row.push(field); field = ''; } else if (ch === '\n') { row.push(field); rows.push(row); row = []; field = ''; } else if (ch === '\r') { row.push(field); rows.push(row); row = []; field = ''; if (source[i+1] === '\n') i++; } else field += ch; } if (field.length || row.length) { row.push(field); rows.push(row); } const nonEmpty = rows.filter(r => r.some(c => String(c).trim() !== '')); if (!nonEmpty.length) return { headers: [], rows: [] }; const headers = nonEmpty[0].map((h,i) => String(h).replace(/^\uFEFF/,'').trim() || 'column_' + (i+1)); return { headers, rows: nonEmpty.slice(1).map(cells => Object.fromEntries(headers.map((h,i) => [h, cells[i] ?? '']))) }; }
+function parseNumber(value) { const n = Number(String(value ?? '').trim()); return Number.isFinite(n) ? n : NaN; }
+function numericTimeScale(column) { const lower = column.toLowerCase(); if (lower.includes('us') || lower.includes('micro')) return 1/1000000; if (lower.includes('ms') || lower.includes('milli')) return 1/1000; return 1; }
+function columnOrNull(headers, name) { return headers.includes(name) ? name : null; }
+function mean(values) { const finite = values.filter(Number.isFinite); return finite.length ? finite.reduce((a,b)=>a+b,0)/finite.length : NaN; }
+function sd(values) { const m = mean(values); const finite = values.filter(Number.isFinite); if (finite.length < 2 || !Number.isFinite(m)) return NaN; return Math.sqrt(finite.reduce((sum,v)=>sum+(v-m)*(v-m),0)/(finite.length-1)); }
+function centeredMovingAverage(values, requestedWindow) { const windowSize = Math.max(1, Math.floor(Number(requestedWindow) || 1)); if (windowSize <= 1) return values.slice(); const half = Math.floor(windowSize/2); return values.map((_,i) => { let sum = 0, count = 0; for (let j=Math.max(0,i-half); j<=Math.min(values.length-1,i+half); j++) if (Number.isFinite(values[j])) { sum += values[j]; count++; } return count ? sum/count : values[i]; }); }
+function sampleTimeSec(row, rowIndex, timeColumn) {
+  let timeSec = rowIndex / 60;
+  if (timeColumn) {
+    if (timeColumn === 'iso_time') {
+      const parsed = Date.parse(row[timeColumn]);
+      if (Number.isFinite(parsed)) timeSec = parsed / 1000;
+    } else {
+      const parsed = parseNumber(row[timeColumn]);
+      if (Number.isFinite(parsed)) timeSec = parsed * numericTimeScale(timeColumn);
+    }
+  }
+  return timeSec;
+}
+function extractHipReference(rows, headers, timeColumn) {
+  const hipColumn = columnOrNull(headers, 'hip_quaternion_pitch_deg') || columnOrNull(headers, 'torso_pitch_deg');
+  if (!hipColumn) return [];
+  const raw = [];
+  rows.forEach((row, i) => {
+    const value = parseNumber(row[hipColumn]);
+    const timeSec = sampleTimeSec(row, i, timeColumn);
+    if (Number.isFinite(value) && Number.isFinite(timeSec)) raw.push({ rowIndex: i, timeSec, value });
+  });
+  raw.sort((a,b) => a.timeSec-b.timeSec || a.rowIndex-b.rowIndex);
+  if (!raw.length) return [];
+  const base = raw[0].timeSec;
+  const values = raw.map(s => s.value);
+  const smooth = centeredMovingAverage(values, 11);
+  return raw.map((s,i) => ({ timeSec: Math.max(0, s.timeSec - base), value: s.value, smoothValue: smooth[i] }));
+}
+function extractFootAngularVelocitySamples(rows, headers, timeColumn, options) {
+  const required = ['foot_quaternion_w','foot_quaternion_x','foot_quaternion_y','foot_quaternion_z'];
+  if (!required.every(h => headers.includes(h))) {
+    throw new Error('This CSV does not contain foot quaternion columns needed for foot angular velocity detection.');
+  }
+  const hasSource = headers.includes('source_segment');
+  const raw = [];
+  rows.forEach((row, i) => {
+    const source = String(row.source_segment || '').toLowerCase();
+    if (hasSource && source && source !== 'foot' && source !== 'mock') return;
+    const q = {
+      w: parseNumber(row.foot_quaternion_w),
+      x: parseNumber(row.foot_quaternion_x),
+      y: parseNumber(row.foot_quaternion_y),
+      z: parseNumber(row.foot_quaternion_z),
+    };
+    if (![q.w, q.x, q.y, q.z].every(Number.isFinite)) return;
+    const timeSec = sampleTimeSec(row, i, timeColumn);
+    if (Number.isFinite(timeSec)) raw.push({ rowIndex: i, timeSec, quaternion: q });
+  });
+  raw.sort((a,b) => a.timeSec-b.timeSec || a.rowIndex-b.rowIndex);
+  if (raw.length < 10) throw new Error('Not enough foot quaternion samples to detect gait cycles. Try analyzing a log that includes foot DOT streaming.');
+  const base = raw[0].timeSec;
+  const samples = [];
+  let previous = null;
+  for (const item of raw) {
+    if (!previous) { previous = item; continue; }
+    const dt = item.timeSec - previous.timeSec;
+    const speed = quatAngularSpeedDegS(previous.quaternion, item.quaternion, dt);
+    if (Number.isFinite(speed)) samples.push({ index: samples.length, rowIndex: item.rowIndex, timeSec: Math.max(0, item.timeSec - base), value: speed });
+    if (dt > 0) previous = item;
+  }
+  if (samples.length < 10) throw new Error('Not enough valid foot angular velocity samples to detect gait cycles.');
+  const smoothValues = centeredMovingAverage(samples.map(s => s.value), options.smoothingWindow);
+  return samples.map((s,i) => ({ ...s, smoothValue: smoothValues[i] }));
+}
+function extractAngleSamples(rows, headers, timeColumn, options) {
+  const variable = columnOrNull(headers, options.variable) || columnOrNull(headers, 'ankle_dorsiflexion_plantarflexion_deg');
+  if (!variable) throw new Error('Could not find the selected running angle column in this CSV.');
+  const raw = rows.map((row, i) => ({ rowIndex: i, timeSec: sampleTimeSec(row, i, timeColumn), value: parseNumber(row[variable]) }))
+    .filter(s => Number.isFinite(s.value) && Number.isFinite(s.timeSec));
+  if (raw.length < 10) throw new Error('Not enough valid samples to detect gait cycles.');
+  raw.sort((a,b) => a.timeSec-b.timeSec || a.rowIndex-b.rowIndex);
+  const base = raw[0].timeSec;
+  const samples = raw.map((s,i) => ({ index: i, rowIndex: s.rowIndex, timeSec: Math.max(0, s.timeSec - base), value: s.value }));
+  const smoothValues = centeredMovingAverage(samples.map(s => s.value), options.smoothingWindow);
+  return samples.map((s,i) => ({ ...s, smoothValue: smoothValues[i] }));
+}
+function extractAnalysisSamples(text, options) {
+  const { headers, rows } = parseCsv(text);
+  if (!headers.length) throw new Error('The selected CSV appears to be empty.');
+  const timeColumn = ['elapsed_s','time_s','time_sec','timestamp_s','timestamp_ms','timestamp_us','iso_time'].find(h => headers.includes(h));
+  const variable = options.variable || 'foot_quaternion_angular_velocity_deg_s';
+  const samples = variable === 'foot_quaternion_angular_velocity_deg_s'
+    ? extractFootAngularVelocitySamples(rows, headers, timeColumn, options)
+    : extractAngleSamples(rows, headers, timeColumn, options);
+  const hipReference = extractHipReference(rows, headers, timeColumn);
+  const signalUnit = variable === 'foot_quaternion_angular_velocity_deg_s' ? 'deg/s' : 'deg';
+  return { variable, timeColumn: timeColumn || 'row_index_assuming_60_hz', samples, hipReference, signalUnit };
+}
+function estimateMedianInterval(samples) {
+  const intervals = [];
+  for (let i=1;i<samples.length;i++) {
+    const dt = samples[i].timeSec - samples[i-1].timeSec;
+    if (Number.isFinite(dt) && dt > 0) intervals.push(dt);
+  }
+  if (!intervals.length) return 1/60;
+  intervals.sort((a,b)=>a-b);
+  return intervals[Math.floor(intervals.length/2)] || 1/60;
+}
+function localProminence(values, index, windowSamples, polarity) {
+  const start = Math.max(0, index - windowSamples);
+  const end = Math.min(values.length - 1, index + windowSamples);
+  const v = values[index];
+  let leftExtreme = v, rightExtreme = v;
+  for (let i=start;i<index;i++) {
+    if (polarity === 'min') leftExtreme = Math.max(leftExtreme, values[i]);
+    else leftExtreme = Math.min(leftExtreme, values[i]);
+  }
+  for (let i=index+1;i<=end;i++) {
+    if (polarity === 'min') rightExtreme = Math.max(rightExtreme, values[i]);
+    else rightExtreme = Math.min(rightExtreme, values[i]);
+  }
+  return polarity === 'min' ? Math.min(leftExtreme - v, rightExtreme - v) : Math.min(v - leftExtreme, v - rightExtreme);
+}
+function detectFootContacts(samples, options) {
+  const polarity = options.contactPolarity === 'max' ? 'max' : 'min';
+  const minIntervalSec = Math.max(0.15, Number(options.minStepIntervalSec) || 0.35);
+  const minProminenceDeg = Math.max(0, Number(options.minProminenceDeg) || 0);
+  const dt = estimateMedianInterval(samples);
+  const windowSamples = Math.max(2, Math.round(minIntervalSec / Math.max(dt, 0.001) / 2));
+  const values = samples.map(s => s.smoothValue);
+  const candidates = [];
+  for (let i=1;i<values.length-1;i++) {
+    const prev = values[i-1], current = values[i], next = values[i+1];
+    const isExtreme = polarity === 'min'
+      ? current <= prev && current < next
+      : current >= prev && current > next;
+    if (!isExtreme) continue;
+    const prominence = localProminence(values, i, windowSamples, polarity);
+    if (prominence >= minProminenceDeg) candidates.push({ index: i, timeSec: samples[i].timeSec, value: samples[i].smoothValue, prominence });
+  }
+  const selected = [];
+  for (const candidate of candidates) {
+    const last = selected[selected.length - 1];
+    if (!last || candidate.timeSec - last.timeSec >= minIntervalSec) {
+      selected.push(candidate);
+      continue;
+    }
+    const candidateIsStronger = candidate.prominence > last.prominence || (candidate.prominence === last.prominence && (polarity === 'min' ? candidate.value < last.value : candidate.value > last.value));
+    if (candidateIsStronger) selected[selected.length - 1] = candidate;
+  }
+  return selected;
+}
+function findToeOffInWindow(samples, options) {
+  const startTimeSec = Number(options.startTimeSec);
+  const endTimeSec = Number(options.endTimeSec);
+  const polarity = options.toeOffPolarity === 'min' ? 'min' : 'max';
+  const minProminence = Math.max(0, Number(options.minToeOffProminence) || 0);
+  if (!Number.isFinite(startTimeSec) || !Number.isFinite(endTimeSec) || endTimeSec <= startTimeSec) return null;
+  const startIndex = samples.findIndex(s => s.timeSec >= startTimeSec);
+  if (startIndex < 0) return null;
+  let endIndex = samples.findIndex(s => s.timeSec > endTimeSec);
+  if (endIndex < 0) endIndex = samples.length - 1;
+  endIndex = Math.max(startIndex + 2, endIndex - 1);
+  const values = samples.map(s => s.smoothValue);
+  const windowSamples = Math.max(2, Math.floor((endIndex - startIndex) / 4));
+  const candidates = [];
+  for (let i = startIndex + 1; i < endIndex; i++) {
+    const prev = values[i - 1], current = values[i], next = values[i + 1];
+    const isExtreme = polarity === 'min' ? current <= prev && current < next : current >= prev && current > next;
+    if (!isExtreme) continue;
+    const prominence = localProminence(values, i, windowSamples, polarity);
+    if (prominence < minProminence) continue;
+    candidates.push({ index: i, timeSec: samples[i].timeSec, value: samples[i].smoothValue, prominence });
+  }
+  if (!candidates.length) return null;
+  candidates.sort((a, b) => {
+    if (b.prominence !== a.prominence) return b.prominence - a.prominence;
+    return polarity === 'min' ? a.value - b.value : b.value - a.value;
+  });
+  return candidates[0];
+}
+
+function pickFirstHeader(headers, candidates) {
+  return candidates.find(h => headers.includes(h)) || null;
+}
+function extractAuxSeries(rows, headers, timeColumn, valueColumn, smoothingWindow = 1) {
+  if (!valueColumn || !headers.includes(valueColumn)) return [];
+  const raw = rows.map((row, i) => ({ rowIndex: i, timeSec: sampleTimeSec(row, i, timeColumn), value: parseNumber(row[valueColumn]) }))
+    .filter(s => Number.isFinite(s.timeSec) && Number.isFinite(s.value));
+  if (!raw.length) return [];
+  raw.sort((a,b) => a.timeSec-b.timeSec || a.rowIndex-b.rowIndex);
+  const base = raw[0].timeSec;
+  const values = raw.map(s => s.value);
+  const smoothValues = centeredMovingAverage(values, smoothingWindow);
+  return raw.map((s,i) => ({ index: i, rowIndex: s.rowIndex, timeSec: Math.max(0, s.timeSec - base), value: s.value, smoothValue: smoothValues[i] }));
+}
+function extractAngleRomSeries(text, smoothingWindow = 1) {
+  const { headers, rows } = parseCsv(text);
+  const timeColumn = ['elapsed_s','time_s','time_sec','timestamp_s','timestamp_ms','timestamp_us','iso_time'].find(h => headers.includes(h));
+  const angleColumns = {
+    ankleDpPf: 'ankle_dorsiflexion_plantarflexion_deg',
+    ankleInvEv: 'ankle_inversion_eversion_deg',
+    hipFlexExt: 'torso_pitch_deg',
+    hipRotation: 'torso_roll_deg',
+  };
+  const out = {};
+  for (const [key, col] of Object.entries(angleColumns)) out[key] = extractAuxSeries(rows, headers, timeColumn, col, smoothingWindow);
+  return out;
+}
+function phaseRom(series, startTimeSec, endTimeSec) {
+  if (!Array.isArray(series) || series.length === 0 || !Number.isFinite(startTimeSec) || !Number.isFinite(endTimeSec) || endTimeSec <= startTimeSec) return NaN;
+  const values = series.filter(s => s.timeSec >= startTimeSec && s.timeSec <= endTimeSec).map(s => s.smoothValue).filter(Number.isFinite);
+  if (values.length < 2) return NaN;
+  return Math.max(...values) - Math.min(...values);
+}
+function extractShankFreeAccelerationSeries(text, smoothingWindow = 3) {
+  const { headers, rows } = parseCsv(text);
+  if (!headers.length) return [];
+  const timeColumn = ['elapsed_s','time_s','time_sec','timestamp_s','timestamp_ms','timestamp_us','iso_time'].find(h => headers.includes(h));
+  const resultantColumn = pickFirstHeader(headers, [
+    'shank_free_acceleration_resultant_m_s2',
+    'shank_free_acceleration_resultant',
+    'shank_free_accel_resultant',
+    'shank_resultant_free_acceleration_m_s2',
+    'shank_acceleration_resultant_m_s2',
+    'shank_accel_resultant',
+  ]);
+  const xColumn = pickFirstHeader(headers, ['shank_free_acceleration_x_m_s2','shank_free_acceleration_x','shank_free_accel_x','shank_acceleration_x','shank_accel_x']);
+  const yColumn = pickFirstHeader(headers, ['shank_free_acceleration_y_m_s2','shank_free_acceleration_y','shank_free_accel_y','shank_acceleration_y','shank_accel_y']);
+  const zColumn = pickFirstHeader(headers, ['shank_free_acceleration_z_m_s2','shank_free_acceleration_z','shank_free_accel_z','shank_acceleration_z','shank_accel_z']);
+  if (!resultantColumn && !(xColumn && yColumn && zColumn)) return [];
+  const raw = [];
+  rows.forEach((row, i) => {
+    let value = NaN;
+    if (resultantColumn) {
+      value = parseNumber(row[resultantColumn]);
+    } else {
+      const ax = parseNumber(row[xColumn]);
+      const ay = parseNumber(row[yColumn]);
+      const az = parseNumber(row[zColumn]);
+      if ([ax, ay, az].every(Number.isFinite)) value = Math.hypot(ax, ay, az);
+    }
+    const timeSec = sampleTimeSec(row, i, timeColumn);
+    if (Number.isFinite(value) && Number.isFinite(timeSec)) raw.push({ rowIndex: i, timeSec, value });
+  });
+  if (!raw.length) return [];
+  raw.sort((a,b) => a.timeSec-b.timeSec || a.rowIndex-b.rowIndex);
+  const base = raw[0].timeSec;
+  const values = raw.map(s => s.value);
+  const smoothValues = centeredMovingAverage(values, Math.max(1, Math.floor(Number(smoothingWindow) || 1)));
+  return raw.map((s,i) => ({ index: i, rowIndex: s.rowIndex, timeSec: Math.max(0, s.timeSec - base), value: s.value, smoothValue: smoothValues[i] }));
+}
+function impactAccelerationMetric(accelSeries, contactTimeSec, windowSec = 0.05) {
+  if (!Array.isArray(accelSeries) || accelSeries.length === 0 || !Number.isFinite(contactTimeSec)) {
+    return { peak: NaN, timeToPeakSec: NaN, peakG: NaN };
+  }
+  const samples = accelSeries.filter(s => s.timeSec >= contactTimeSec && s.timeSec <= contactTimeSec + windowSec && Number.isFinite(s.smoothValue));
+  if (!samples.length) return { peak: NaN, timeToPeakSec: NaN, peakG: NaN };
+  let peakSample = samples[0];
+  for (const sample of samples) if (sample.smoothValue > peakSample.smoothValue) peakSample = sample;
+  return { peak: peakSample.smoothValue, timeToPeakSec: peakSample.timeSec - contactTimeSec, peakG: peakSample.smoothValue / 9.80665 };
+}
+function attachRomAndAccelerationMetrics(cycles, angleSeries, accelSeries) {
+  for (const cycle of cycles) {
+    const stanceStart = cycle.startTimeSec;
+    const stanceEnd = cycle.toeOffTimeSec;
+    const swingStart = cycle.toeOffTimeSec;
+    const swingEnd = cycle.endTimeSec;
+    cycle.ankleDpPfStanceRomDeg = phaseRom(angleSeries.ankleDpPf, stanceStart, stanceEnd);
+    cycle.ankleDpPfSwingRomDeg = phaseRom(angleSeries.ankleDpPf, swingStart, swingEnd);
+    cycle.ankleInvEvStanceRomDeg = phaseRom(angleSeries.ankleInvEv, stanceStart, stanceEnd);
+    cycle.ankleInvEvSwingRomDeg = phaseRom(angleSeries.ankleInvEv, swingStart, swingEnd);
+    cycle.hipFlexExtStanceRomDeg = phaseRom(angleSeries.hipFlexExt, stanceStart, stanceEnd);
+    cycle.hipFlexExtSwingRomDeg = phaseRom(angleSeries.hipFlexExt, swingStart, swingEnd);
+    cycle.hipRotationStanceRomDeg = phaseRom(angleSeries.hipRotation, stanceStart, stanceEnd);
+    cycle.hipRotationSwingRomDeg = phaseRom(angleSeries.hipRotation, swingStart, swingEnd);
+    const impact = impactAccelerationMetric(accelSeries, cycle.startTimeSec, 0.05);
+    cycle.peakShankFreeAcceleration050ms = impact.peak;
+    cycle.peakShankFreeAcceleration050msG = impact.peakG;
+    cycle.timeToPeakShankFreeAcceleration050msSec = impact.timeToPeakSec;
+  }
+}
+function analyzeGaitCsv(text, options) {
+  const { variable, timeColumn, samples, hipReference, signalUnit } = extractAnalysisSamples(text, options);
+  const romAngleSeries = extractAngleRomSeries(text, Number(options.smoothingWindow) || 1);
+  const shankFreeAccelerationSeries = extractShankFreeAccelerationSeries(text, Number(options.accelSmoothingWindow) || 3);
+  const contacts = detectFootContacts(samples, options);
+  const toeOffPolarity = options.toeOffPolarity === 'min' ? 'min' : 'max';
+  const minToeOffDelaySec = Math.max(0.03, Number(options.minToeOffDelaySec) || 0.08);
+  const maxToeOffFraction = Math.min(0.9, Math.max(0.2, Number(options.maxToeOffFraction) || 0.65));
+  const minToeOffProminence = Math.max(0, Number(options.minToeOffProminence) || 0);
+  const cycles = [];
+  const toeOffs = [];
+  for (let i=0;i<contacts.length-1;i++) {
+    const start = contacts[i];
+    const end = contacts[i+1];
+    const durationSec = end.timeSec - start.timeSec;
+    if (durationSec <= 0) continue;
+    const toeOffSearchStartSec = start.timeSec + minToeOffDelaySec;
+    const toeOffSearchEndSec = start.timeSec + durationSec * maxToeOffFraction;
+    const toeOff = findToeOffInWindow(samples, {
+      startTimeSec: toeOffSearchStartSec,
+      endTimeSec: toeOffSearchEndSec,
+      toeOffPolarity,
+      minToeOffProminence
+    });
+    if (toeOff) toeOffs.push(toeOff);
+    const groundContactTimeSec = toeOff ? toeOff.timeSec - start.timeSec : NaN;
+    cycles.push({
+      cycle: cycles.length + 1,
+      startIndex: start.index,
+      endIndex: end.index,
+      startTimeSec: start.timeSec,
+      endTimeSec: end.timeSec,
+      durationSec,
+      cadenceSpm: 60 / durationSec,
+      startValueDeg: start.value,
+      endValueDeg: end.value,
+      startProminenceDeg: start.prominence,
+      endProminenceDeg: end.prominence,
+      toeOffIndex: toeOff?.index ?? null,
+      toeOffTimeSec: toeOff?.timeSec ?? NaN,
+      toeOffValueDeg: toeOff?.value ?? NaN,
+      toeOffProminence: toeOff?.prominence ?? NaN,
+      groundContactTimeSec,
+      groundContactPercent: Number.isFinite(groundContactTimeSec) ? (groundContactTimeSec / durationSec) * 100 : NaN,
+    });
+  }
+  attachRomAndAccelerationMetrics(cycles, romAngleSeries, shankFreeAccelerationSeries);
+  const firstContact = contacts[0];
+  const lastContact = contacts[contacts.length - 1];
+  const contactSpanSec = firstContact && lastContact ? Math.max(0, lastContact.timeSec - firstContact.timeSec) : 0;
+  const instrumentedFootCadenceSpm = contactSpanSec > 0 && contacts.length > 1 ? ((contacts.length - 1) / contactSpanSec) * 60 : NaN;
+  return {
+    type: 'gait_cycles_with_ground_contact_time',
+    variable,
+    timeColumn,
+    samples: samples.length,
+    sampleSeries: samples,
+    hipReferenceSeries: hipReference,
+    signalUnit,
+    detectionParameters: {
+      smoothingWindow: Number(options.smoothingWindow),
+      minStepIntervalSec: Number(options.minStepIntervalSec),
+      minProminenceDeg: Number(options.minProminenceDeg),
+      minToeOffDelaySec,
+      maxToeOffFraction,
+      minToeOffProminence,
+    },
+    durationSec: samples[samples.length-1].timeSec - samples[0].timeSec,
+    contactPolarity: options.contactPolarity === 'max' ? 'max' : 'min',
+    toeOffPolarity,
+    contacts,
+    toeOffs,
+    cycles,
+    stepCount: contacts.length,
+    cycleCount: cycles.length,
+    instrumentedFootCadenceSpm,
+    cadenceSpm: instrumentedFootCadenceSpm,
+    meanCycleDurationSec: mean(cycles.map(c => c.durationSec)),
+    meanCycleCadenceSpm: mean(cycles.map(c => c.cadenceSpm)),
+    meanGroundContactTimeSec: mean(cycles.map(c => c.groundContactTimeSec)),
+    sdGroundContactTimeSec: sd(cycles.map(c => c.groundContactTimeSec)),
+    meanGroundContactPercent: mean(cycles.map(c => c.groundContactPercent)),
+    meanPeakShankFreeAcceleration050ms: mean(cycles.map(c => c.peakShankFreeAcceleration050ms)),
+    meanPeakShankFreeAcceleration050msG: mean(cycles.map(c => c.peakShankFreeAcceleration050msG)),
+    meanTimeToPeakShankFreeAcceleration050msSec: mean(cycles.map(c => c.timeToPeakShankFreeAcceleration050msSec)),
+    meanAnkleDpPfStanceRomDeg: mean(cycles.map(c => c.ankleDpPfStanceRomDeg)),
+    meanAnkleDpPfSwingRomDeg: mean(cycles.map(c => c.ankleDpPfSwingRomDeg)),
+    meanAnkleInvEvStanceRomDeg: mean(cycles.map(c => c.ankleInvEvStanceRomDeg)),
+    meanAnkleInvEvSwingRomDeg: mean(cycles.map(c => c.ankleInvEvSwingRomDeg)),
+    meanHipFlexExtStanceRomDeg: mean(cycles.map(c => c.hipFlexExtStanceRomDeg)),
+    meanHipFlexExtSwingRomDeg: mean(cycles.map(c => c.hipFlexExtSwingRomDeg)),
+    meanHipRotationStanceRomDeg: mean(cycles.map(c => c.hipRotationStanceRomDeg)),
+    meanHipRotationSwingRomDeg: mean(cycles.map(c => c.hipRotationSwingRomDeg)),
+  };
+}
+function summaryToCsv(result) {
+  const summaryHeaders = ['metric','value'];
+  const summaryRows = [
+    ['signal', displayVariableName(result.variable)],
+    ['contact_feature', result.contactPolarity],
+    ['toe_off_feature', result.toeOffPolarity],
+    ['signal_unit', result.signalUnit || 'deg'],
+    ['samples', result.samples],
+    ['recording_duration_s', round(result.durationSec)],
+    ['detected_instrumented_foot_contacts', result.stepCount],
+    ['foot_contact_to_foot_contact_cycles', result.cycleCount],
+    ['cadence_steps_per_min_single_foot', round(result.cadenceSpm)],
+    ['mean_cycle_duration_s', round(result.meanCycleDurationSec)],
+    ['mean_cycle_cadence_steps_per_min_single_foot', round(result.meanCycleCadenceSpm)],
+    ['mean_ground_contact_time_s', round(result.meanGroundContactTimeSec)],
+    ['sd_ground_contact_time_s', round(result.sdGroundContactTimeSec)],
+    ['mean_ground_contact_percent_cycle', round(result.meanGroundContactPercent)],
+    ['mean_peak_shank_resultant_free_acceleration_0_50ms', round(result.meanPeakShankFreeAcceleration050ms)],
+    ['mean_peak_shank_resultant_free_acceleration_0_50ms_g', round(result.meanPeakShankFreeAcceleration050msG)],
+    ['mean_time_to_peak_shank_free_acceleration_0_50ms_ms', round(result.meanTimeToPeakShankFreeAcceleration050msSec * 1000)],
+    ['mean_ankle_dp_pf_stance_rom_deg', round(result.meanAnkleDpPfStanceRomDeg)],
+    ['mean_ankle_dp_pf_swing_rom_deg', round(result.meanAnkleDpPfSwingRomDeg)],
+    ['mean_ankle_inv_ev_stance_rom_deg', round(result.meanAnkleInvEvStanceRomDeg)],
+    ['mean_ankle_inv_ev_swing_rom_deg', round(result.meanAnkleInvEvSwingRomDeg)],
+    ['mean_hip_flex_ext_stance_rom_deg', round(result.meanHipFlexExtStanceRomDeg)],
+    ['mean_hip_flex_ext_swing_rom_deg', round(result.meanHipFlexExtSwingRomDeg)],
+    ['mean_hip_rotation_stance_rom_deg', round(result.meanHipRotationStanceRomDeg)],
+    ['mean_hip_rotation_swing_rom_deg', round(result.meanHipRotationSwingRomDeg)]
+  ];
+  const cycleHeaders = ['cycle','contact_time_s','toe_off_time_s','next_contact_time_s','ground_contact_time_s','ground_contact_percent_cycle','cycle_duration_s','cycle_cadence_steps_per_min','peak_shank_resultant_free_acceleration_0_50ms','peak_shank_resultant_free_acceleration_0_50ms_g','time_to_peak_shank_free_acceleration_0_50ms_ms','ankle_dp_pf_stance_rom_deg','ankle_dp_pf_swing_rom_deg','ankle_inv_ev_stance_rom_deg','ankle_inv_ev_swing_rom_deg','hip_flex_ext_stance_rom_deg','hip_flex_ext_swing_rom_deg','hip_rotation_stance_rom_deg','hip_rotation_swing_rom_deg','contact_value','toe_off_value','next_contact_value','contact_index','toe_off_index','next_contact_index'];
+  const cycleLines = result.cycles.map(c => cycleHeaders.map(h => {
+    const row = {
+      cycle: c.cycle,
+      contact_time_s: round(c.startTimeSec),
+      toe_off_time_s: round(c.toeOffTimeSec),
+      next_contact_time_s: round(c.endTimeSec),
+      ground_contact_time_s: round(c.groundContactTimeSec),
+      ground_contact_percent_cycle: round(c.groundContactPercent),
+      cycle_duration_s: round(c.durationSec),
+      cycle_cadence_steps_per_min: round(c.cadenceSpm),
+      peak_shank_resultant_free_acceleration_0_50ms: round(c.peakShankFreeAcceleration050ms),
+      peak_shank_resultant_free_acceleration_0_50ms_g: round(c.peakShankFreeAcceleration050msG),
+      time_to_peak_shank_free_acceleration_0_50ms_ms: round(c.timeToPeakShankFreeAcceleration050msSec * 1000),
+      ankle_dp_pf_stance_rom_deg: round(c.ankleDpPfStanceRomDeg),
+      ankle_dp_pf_swing_rom_deg: round(c.ankleDpPfSwingRomDeg),
+      ankle_inv_ev_stance_rom_deg: round(c.ankleInvEvStanceRomDeg),
+      ankle_inv_ev_swing_rom_deg: round(c.ankleInvEvSwingRomDeg),
+      hip_flex_ext_stance_rom_deg: round(c.hipFlexExtStanceRomDeg),
+      hip_flex_ext_swing_rom_deg: round(c.hipFlexExtSwingRomDeg),
+      hip_rotation_stance_rom_deg: round(c.hipRotationStanceRomDeg),
+      hip_rotation_swing_rom_deg: round(c.hipRotationSwingRomDeg),
+      contact_value: round(c.startValueDeg),
+      toe_off_value: round(c.toeOffValueDeg),
+      next_contact_value: round(c.endValueDeg),
+      contact_index: c.startIndex,
+      toe_off_index: c.toeOffIndex ?? '',
+      next_contact_index: c.endIndex
+    };
+    return JSON.stringify(row[h] ?? '');
+  }).join(','));
+  return summaryHeaders.join(',') + '\n' + summaryRows.map(r => r.map(v => JSON.stringify(v ?? '')).join(',')).join('\n') + '\n\n' + cycleHeaders.join(',') + '\n' + cycleLines.join('\n');
+}
+
+
+const $ = (id) => document.getElementById(id);
+const ui = {
+  browserSupport: $('browserSupport'), ankleDpPf: $('ankleDpPf'), ankleInvEv: $('ankleInvEv'), torsoPitch: $('torsoPitch'), torsoRoll: $('torsoRoll'), rawDpPf: $('rawDpPf'), rawInvEv: $('rawInvEv'),
+  shankBatteryMetric: $('shankBatteryMetric'), footBatteryMetric: $('footBatteryMetric'), hipBatteryMetric: $('hipBatteryMetric'), sagittalAxisSelect: $('sagittalAxisSelect'), frontalAxisSelect: $('frontalAxisSelect'), smoothingRange: $('smoothingRange'), smoothingValue: $('smoothingValue'), invertDpPf: $('invertDpPf'), invertInvEv: $('invertInvEv'), invertTorsoPitch: $('invertTorsoPitch'), invertTorsoRoll: $('invertTorsoRoll'), autoStart: $('autoStart'), calibrateBtn: $('calibrateBtn'), resetZeroBtn: $('resetZeroBtn'), resetFilterBtn: $('resetFilterBtn'), startAllBtn: $('startAllBtn'), stopAllBtn: $('stopAllBtn'), sessionNameInput: $('sessionNameInput'), fileNameInput: $('fileNameInput'), chooseFolderBtn: $('chooseFolderBtn'), folderStatus: $('folderStatus'), logBtn: $('logBtn'), downloadBtn: $('downloadBtn'), mockBtn: $('mockBtn'), clearBtn: $('clearBtn'), logStatus: $('logStatus'), analysisFileInput: $('analysisFileInput'), analysisAngleSelect: $('analysisAngleSelect'), contactPolaritySelect: $('contactPolaritySelect'), analysisSmoothingInput: $('analysisSmoothingInput'), minStepIntervalInput: $('minStepIntervalInput'), contactProminenceInput: $('contactProminenceInput'), toeOffPolaritySelect: $('toeOffPolaritySelect'), minToeOffDelayInput: $('minToeOffDelayInput'), maxToeOffFractionInput: $('maxToeOffFractionInput'), toeOffProminenceInput: $('toeOffProminenceInput'), accelSmoothingInput: $('accelSmoothingInput'), analyzeFileBtn: $('analyzeFileBtn'), analyzeCurrentLogBtn: $('analyzeCurrentLogBtn'), exportAnalysisBtn: $('exportAnalysisBtn'), analysisStatus: $('analysisStatus'), analysisSummary: $('analysisSummary'), analysisTable: $('analysisTable'), contactChart: $('contactChart'), chart: $('angleChart'),
+  shank: { status: $('shankStatus'), name: $('shankName'), timestamp: $('shankTs'), euler: $('shankEuler'), battery: $('shankBattery'), connect: $('connectShankBtn'), start: $('startShankBtn'), stop: $('stopShankBtn') },
+  foot: { status: $('footStatus'), name: $('footName'), timestamp: $('footTs'), euler: $('footEuler'), battery: $('footBattery'), connect: $('connectFootBtn'), start: $('startFootBtn'), stop: $('stopFootBtn') },
+  hip: { status: $('hipStatus'), name: $('hipName'), timestamp: $('hipTs'), euler: $('hipEuler'), battery: $('hipBattery'), connect: $('connectHipBtn'), start: $('startHipBtn'), stop: $('stopHipBtn') },
+};
+const estimator = new RunningAngleEstimator();
+const chart = new MultiLineChart(ui.chart);
+const contactChart = new GaitContactChart(ui.contactChart);
+const sensors = { shank: new XsensDotDevice('shank'), foot: new XsensDotDevice('foot'), hip: new XsensDotDevice('hip') };
+let isLogging = false, logRows = [], recordingSessionId = 0, currentRecordingStartedAtIso = '', mockTimer = null, directoryHandle = null, latestAnalysisResult = null, latestAnalysisSourceName = '', mockBatteries = { shank: null, foot: null, hip: null }, mockFreeAccelerations = { shank: null };
+function fmt(value, digits = 1) { return Number.isFinite(value) ? value.toFixed(digits) : '--.-'; }
+function round(value, digits = 3) { if (!Number.isFinite(value)) return ''; const factor = 10 ** digits; return Math.round(value * factor) / factor; }
+function pad2(value) { return String(value).padStart(2,'0'); }
+function localTimestampForFileName(date = new Date()) { return [date.getFullYear(), pad2(date.getMonth()+1), pad2(date.getDate())].join('') + '-' + [pad2(date.getHours()), pad2(date.getMinutes()), pad2(date.getSeconds())].join(''); }
+function defaultCsvName() { return 'xsens-dot-running-analysis-' + localTimestampForFileName() + '.csv'; }
+function getCsvFileName() { const raw = ui.fileNameInput.value.trim() || defaultCsvName(); const sanitized = raw.replace(/[<>:"/\\|?*\x00-\x1F]/g, '_').replace(/\s+/g, '_').replace(/^\.+/, '').slice(0,180) || defaultCsvName(); return sanitized.toLowerCase().endsWith('.csv') ? sanitized : sanitized + '.csv'; }
+function setStatus(segment, text, state='disconnected') { ui[segment].status.textContent = text; ui[segment].status.dataset.state = state; }
+function showError(error) { console.error(error); ui.browserSupport.textContent = error?.message ?? String(error); ui.browserSupport.dataset.state = 'error'; }
+function updateBrowserSupport() { const supported = browserSupportsWebBluetooth(); ui.browserSupport.textContent = supported ? 'Web Bluetooth available. Use Chrome/Edge and keep this page on HTTPS or localhost.' : 'Web Bluetooth not detected. Use desktop Chrome or Edge over HTTPS/localhost.'; ui.browserSupport.dataset.state = supported ? 'ok' : 'error'; }
+function updateSmoothingLabel() { ui.smoothingValue.textContent = Math.round(estimator.smoothingPercent) + '%'; }
+function updateFolderStatus() { if (directoryHandle) ui.folderStatus.textContent = 'Folder selected: ' + directoryHandle.name + '. Save CSV will write ' + getCsvFileName() + ' there.'; else if ('showDirectoryPicker' in window) ui.folderStatus.textContent = 'No folder selected. Save CSV will use the browser download flow.'; else ui.folderStatus.textContent = 'Folder picking is not supported in this browser. Save CSV will use the browser download flow.'; }
+function batteryLabel(battery, compact=false) { if (!battery || !Number.isFinite(battery.levelPercent)) return '--'; const level = battery.levelPercent + '%'; return battery.isCharging ? (compact ? level + ' charging' : level + ' (charging)') : level; }
+function batteryState(battery) { if (!battery || !Number.isFinite(battery.levelPercent)) return 'unknown'; if (battery.isCharging) return 'charging'; if (battery.levelPercent <= 15) return 'low'; if (battery.levelPercent <= 30) return 'warn'; return 'ok'; }
+function chargingLabel(battery) { if (!battery || !Number.isFinite(battery.chargingStatus)) return ''; return battery.isCharging ? 'charging' : 'not_charging'; }
+function getBatteryForSegment(segment) { return sensors[segment].latestBattery ?? mockBatteries[segment] ?? null; }
+function updateBatteryPanel(segment, detail = null) { const hasBatteryProperty = detail && typeof detail === 'object' && Object.prototype.hasOwnProperty.call(detail, 'battery'); const battery = hasBatteryProperty ? detail.battery : detail; const explicitlyUnavailable = detail && typeof detail === 'object' && detail.available === false; const unavailableText = sensors[segment].connected ? 'Unavailable' : '--'; const text = battery ? batteryLabel(battery) : explicitlyUnavailable ? unavailableText : '--'; const compactText = battery ? batteryLabel(battery, true) : explicitlyUnavailable ? unavailableText : '--'; const state = battery ? batteryState(battery) : 'unknown'; ui[segment].battery.textContent = text; ui[segment].battery.dataset.state = state; ui[segment + 'BatteryMetric'].textContent = compactText; ui[segment + 'BatteryMetric'].dataset.state = state; }
+function updateSensorPanel(segment, sample) { if (!sample) return; ui[segment].timestamp.textContent = sample.timestampUs + ' us'; if (sample.quaternion) { const q = sample.quaternion; ui[segment].euler.textContent = 'W ' + fmt(q.w,3) + ' / X ' + fmt(q.x,3) + ' / Y ' + fmt(q.y,3) + ' / Z ' + fmt(q.z,3); } else if (sample.euler) { const e = sample.euler; ui[segment].euler.textContent = 'X ' + fmt(e.x,2) + ' / Y ' + fmt(e.y,2) + ' / Z ' + fmt(e.z,2); } }
+function updateMetrics(sourceSegment='') { const values = { dpPf: estimator.ankleDpPfDeg, invEv: estimator.ankleInvEvDeg, torsoPitch: estimator.torsoPitchDeg, torsoRoll: estimator.torsoRollDeg }; ui.ankleDpPf.textContent = fmt(values.dpPf) + ' deg'; ui.ankleInvEv.textContent = fmt(values.invEv) + ' deg'; ui.torsoPitch.textContent = fmt(values.torsoPitch) + ' deg'; ui.torsoRoll.textContent = fmt(values.torsoRoll) + ' deg'; if (ui.rawDpPf) ui.rawDpPf.textContent = fmt(estimator.rawDpPfDeg) + ' deg'; if (ui.rawInvEv) ui.rawInvEv.textContent = fmt(estimator.rawInvEvDeg) + ' deg'; if (Object.values(values).some(Number.isFinite)) { chart.push(values); maybeLog(sourceSegment); } }
+function maybeLog(sourceSegment) {
+  if (!isLogging) return;
+  const shankBattery = getBatteryForSegment('shank'), footBattery = getBatteryForSegment('foot'), hipBattery = getBatteryForSegment('hip');
+  logRows.push({
+    iso_time: new Date().toISOString(),
+    session_name: ui.sessionNameInput.value.trim(),
+    source_segment: sourceSegment,
+    ankle_dorsiflexion_plantarflexion_deg: estimator.ankleDpPfDeg,
+    ankle_inversion_eversion_deg: estimator.ankleInvEvDeg,
+    hip_quaternion_pitch_deg: estimator.torsoPitchDeg,
+    hip_quaternion_roll_deg: estimator.torsoRollDeg,
+    torso_pitch_deg: estimator.torsoPitchDeg,
+    torso_roll_deg: estimator.torsoRollDeg,
+    ankle_dorsiflexion_plantarflexion_unfiltered_deg: estimator.unfilteredDpPfDeg,
+    ankle_inversion_eversion_unfiltered_deg: estimator.unfilteredInvEvDeg,
+    hip_quaternion_pitch_unfiltered_deg: estimator.unfilteredTorsoPitchDeg,
+    hip_quaternion_roll_unfiltered_deg: estimator.unfilteredTorsoRollDeg,
+    raw_ankle_dorsiflexion_plantarflexion_deg: estimator.rawDpPfDeg,
+    raw_ankle_inversion_eversion_deg: estimator.rawInvEvDeg,
+    raw_hip_quaternion_pitch_deg: estimator.rawTorsoPitchDeg,
+    raw_hip_quaternion_roll_deg: estimator.rawTorsoRollDeg,
+    shank_quaternion_w: estimator.latest.shank?.quaternion?.w ?? '',
+    shank_quaternion_x: estimator.latest.shank?.quaternion?.x ?? '',
+    shank_quaternion_y: estimator.latest.shank?.quaternion?.y ?? '',
+    shank_quaternion_z: estimator.latest.shank?.quaternion?.z ?? '',
+    foot_quaternion_w: estimator.latest.foot?.quaternion?.w ?? '',
+    foot_quaternion_x: estimator.latest.foot?.quaternion?.x ?? '',
+    foot_quaternion_y: estimator.latest.foot?.quaternion?.y ?? '',
+    foot_quaternion_z: estimator.latest.foot?.quaternion?.z ?? '',
+    hip_quaternion_w: estimator.latest.hip?.quaternion?.w ?? '',
+    hip_quaternion_x: estimator.latest.hip?.quaternion?.x ?? '',
+    hip_quaternion_y: estimator.latest.hip?.quaternion?.y ?? '',
+    hip_quaternion_z: estimator.latest.hip?.quaternion?.z ?? '',
+    shank_free_acceleration_x_m_s2: estimator.latest.shank?.freeAcceleration?.x ?? '',
+    shank_free_acceleration_y_m_s2: estimator.latest.shank?.freeAcceleration?.y ?? '',
+    shank_free_acceleration_z_m_s2: estimator.latest.shank?.freeAcceleration?.z ?? '',
+    shank_free_acceleration_resultant_m_s2: estimator.latest.shank?.freeAccelerationResultant ?? (estimator.latest.shank?.freeAcceleration ? Math.hypot(estimator.latest.shank.freeAcceleration.x, estimator.latest.shank.freeAcceleration.y, estimator.latest.shank.freeAcceleration.z) : ''),
+    ankle_zero_quaternion_w: estimator.ankleZeroQuaternion?.w ?? '',
+    ankle_zero_quaternion_x: estimator.ankleZeroQuaternion?.x ?? '',
+    ankle_zero_quaternion_y: estimator.ankleZeroQuaternion?.y ?? '',
+    ankle_zero_quaternion_z: estimator.ankleZeroQuaternion?.z ?? '',
+    hip_zero_quaternion_w: estimator.hipZeroQuaternion?.w ?? '',
+    hip_zero_quaternion_x: estimator.hipZeroQuaternion?.x ?? '',
+    hip_zero_quaternion_y: estimator.hipZeroQuaternion?.y ?? '',
+    hip_zero_quaternion_z: estimator.hipZeroQuaternion?.z ?? '',
+    shank_timestamp_us: estimator.latest.shank?.timestampUs ?? '',
+    foot_timestamp_us: estimator.latest.foot?.timestampUs ?? '',
+    hip_timestamp_us: estimator.latest.hip?.timestampUs ?? '',
+    shank_battery_percent: shankBattery?.levelPercent ?? '',
+    foot_battery_percent: footBattery?.levelPercent ?? '',
+    hip_battery_percent: hipBattery?.levelPercent ?? '',
+    shank_charging: chargingLabel(shankBattery),
+    foot_charging: chargingLabel(footBattery),
+    hip_charging: chargingLabel(hipBattery),
+    sagittal_axis: estimator.sagittalAxis,
+    frontal_axis: estimator.frontalAxis,
+    smoothing_percent: estimator.smoothingPercent,
+    invert_dp_pf: estimator.inverted.dpPf,
+    invert_inv_ev: estimator.inverted.invEv,
+    invert_torso_pitch: estimator.inverted.torsoPitch,
+    invert_torso_roll: estimator.inverted.torsoRoll,
+    recording_session_id: recordingSessionId,
+    recording_started_iso: currentRecordingStartedAtIso
+  });
+  updateLoggingStatus();
+}
+function attachSensorEvents(segment) { const sensor = sensors[segment]; sensor.addEventListener('status', (event) => { const d = event.detail; ui[segment].name.textContent = d.name ?? '--'; const label = d.state === 'streaming' ? 'Streaming' : d.state === 'connected' ? 'Connected' : 'Disconnected'; setStatus(segment, label, d.state); }); sensor.addEventListener('battery', (event) => updateBatteryPanel(segment, event.detail)); sensor.addEventListener('sample', (event) => { const sample = event.detail.sample; estimator.update(segment, sample); updateSensorPanel(segment, sample); updateMetrics(segment); }); sensor.addEventListener('error', (event) => showError(event.detail)); }
+async function connectSegment(segment) { try { setStatus(segment, 'Selecting...', 'connecting'); await sensors[segment].requestAndConnect(); ui[segment].name.textContent = sensors[segment].name; if (ui.autoStart.checked) await sensors[segment].startStreaming(); } catch (error) { setStatus(segment, sensors[segment].connected ? 'Connected' : 'Disconnected', sensors[segment].connected ? 'connected' : 'disconnected'); showError(error); } }
+async function startSegment(segment) { try { await sensors[segment].startStreaming(); } catch (error) { showError(error); } }
+async function stopSegment(segment) { try { await sensors[segment].stopStreaming(); } catch (error) { showError(error); } }
+async function startAll() { await Promise.allSettled(SEGMENTS.map(startSegment)); }
+async function stopAll() { await Promise.allSettled(SEGMENTS.map(stopSegment)); }
+function rowsForMostRecentCsvSave() { return logRows.slice(); }
+function buildCsv(rows = rowsForMostRecentCsvSave()) { if (!rows || !rows.length) return null; const headers = Object.keys(rows[0]); const lines = [headers.join(',')]; for (const row of rows) lines.push(headers.map(h => JSON.stringify(row[h] ?? '')).join(',')); return lines.join('\n'); }
+function downloadCsvBlob(csvText, fileName) { const blob = new Blob([csvText], { type: 'text/csv;charset=utf-8' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = fileName; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); }
+async function chooseFolder() { if (!('showDirectoryPicker' in window)) { updateFolderStatus(); return; } try { directoryHandle = await window.showDirectoryPicker({ mode: 'readwrite' }); updateFolderStatus(); } catch (error) { if (error?.name !== 'AbortError') showError(error); } }
+async function saveCsv() { const csvText = buildCsv(); if (!csvText) { updateLoggingStatus('No rows in the most recent logging session. Start CSV logging first.'); return; } const fileName = getCsvFileName(); if (directoryHandle) { try { const fileHandle = await directoryHandle.getFileHandle(fileName, { create: true }); const writable = await fileHandle.createWritable(); await writable.write(csvText); await writable.close(); ui.logStatus.textContent = 'Saved'; ui.logStatus.hidden = false; ui.logStatus.dataset.state = 'success'; updateFolderStatus(); return; } catch (error) { if (error?.name === 'AbortError') return; showError(error); ui.folderStatus.textContent = 'Could not write to the selected folder. Falling back to browser download.'; } } downloadCsvBlob(csvText, fileName); ui.logStatus.textContent = 'Downloaded'; ui.logStatus.hidden = false; ui.logStatus.dataset.state = 'success'; }
+function updateLoggingStatus(message='') { if (isLogging) { ui.logStatus.textContent = '● Logging ' + logRows.length + ' rows'; ui.logStatus.hidden = false; ui.logStatus.dataset.state = 'active'; } else if (message) { ui.logStatus.textContent = message; ui.logStatus.hidden = false; ui.logStatus.dataset.state = 'info'; } else { ui.logStatus.textContent = ''; ui.logStatus.hidden = true; ui.logStatus.dataset.state = 'idle'; } }
+function resetCurrentRecordingForNewTrial() { recordingSessionId += 1; currentRecordingStartedAtIso = new Date().toISOString(); logRows = []; latestAnalysisResult = null; latestAnalysisSourceName = ''; ui.exportAnalysisBtn.disabled = true; ui.analysisSummary.replaceChildren(); clearAnalysisTable('No analysis result yet.'); contactChart.clear('Analyze a CSV to show foot-contact detection.'); setAnalysisStatus('', 'idle'); }
+function toggleLogging() { const next = !isLogging; if (next) resetCurrentRecordingForNewTrial(); isLogging = next; ui.logBtn.textContent = isLogging ? 'Stop CSV logging' : 'Start CSV logging'; updateLoggingStatus(); }
+function makeElement(tag, text='', className='') { const el = document.createElement(tag); if (className) el.className = className; if (text !== null && text !== undefined) el.textContent = text; return el; }
+function setAnalysisStatus(message='', state='info') { ui.analysisStatus.textContent = message; ui.analysisStatus.hidden = !message; ui.analysisStatus.dataset.state = state; }
+function clearAnalysisTable(message) { const tbody = ui.analysisTable.querySelector('tbody'); const row = document.createElement('tr'); const cell = document.createElement('td'); cell.colSpan = 18; cell.textContent = message; row.appendChild(cell); tbody.replaceChildren(row); }
+function summaryCard(label, value) { const card = makeElement('div','', 'analysis-summary-card'); card.appendChild(makeElement('span', label)); card.appendChild(makeElement('strong', value)); return card; }
+function renderAnalysisResult(result, sourceName) {
+  latestAnalysisResult = result;
+  latestAnalysisSourceName = sourceName || 'analysis';
+  ui.exportAnalysisBtn.disabled = false;
+  ui.analysisSummary.replaceChildren(
+    summaryCard('Detected contacts', String(result.stepCount)),
+    summaryCard('F-C cycles', String(result.cycleCount)),
+    summaryCard('Cadence', Number.isFinite(result.cadenceSpm) ? fmt(result.cadenceSpm,1) + ' steps/min' : '--'),
+    summaryCard('Mean GCT', Number.isFinite(result.meanGroundContactTimeSec) ? fmt(result.meanGroundContactTimeSec,3) + ' s' : '--'),
+    summaryCard('GCT variability', Number.isFinite(result.sdGroundContactTimeSec) ? fmt(result.sdGroundContactTimeSec,3) + ' s' : '--'),
+    summaryCard('Mean GCT %', Number.isFinite(result.meanGroundContactPercent) ? fmt(result.meanGroundContactPercent,1) + '%' : '--'),
+    summaryCard('Mean cycle time', Number.isFinite(result.meanCycleDurationSec) ? fmt(result.meanCycleDurationSec,3) + ' s' : '--'),
+    summaryCard('Signal', displayVariableName(result.variable))
+  );
+  const tbody = ui.analysisTable.querySelector('tbody');
+  if (!result.cycles.length) {
+    const row = document.createElement('tr');
+    const cell = document.createElement('td');
+    cell.colSpan = 18;
+    cell.textContent = 'No complete foot-contact-to-foot-contact cycles detected. Try switching the contact feature, reducing prominence, or changing the smoothing/minimum interval.';
+    row.appendChild(cell);
+    tbody.replaceChildren(row);
+  } else {
+    const rows = result.cycles.map(c => {
+      const row = document.createElement('tr');
+      [
+        String(c.cycle),
+        fmt(c.startTimeSec,3) + ' s',
+        Number.isFinite(c.toeOffTimeSec) ? fmt(c.toeOffTimeSec,3) + ' s' : '--',
+        fmt(c.endTimeSec,3) + ' s',
+        Number.isFinite(c.groundContactTimeSec) ? fmt(c.groundContactTimeSec,3) + ' s' : '--',
+        Number.isFinite(c.groundContactPercent) ? fmt(c.groundContactPercent,1) + '%' : '--',
+        fmt(c.durationSec,3) + ' s',
+        fmt(c.cadenceSpm,1) + ' steps/min',
+        fmt(c.startValueDeg,2) + ' ' + (result.signalUnit || 'deg'),
+        Number.isFinite(c.toeOffValueDeg) ? fmt(c.toeOffValueDeg,2) + ' ' + (result.signalUnit || 'deg') : '--'
+      ].forEach(text => row.appendChild(makeElement('td', text)));
+      return row;
+    });
+    tbody.replaceChildren(...rows);
+  }
+  contactChart.render(result);
+  setAnalysisStatus('Analyzed gait cycles and ground contact time: ' + (sourceName || 'current log') + '.', 'success');
+}
+async function analyzeCsvText(csvText, sourceName) {
+  setAnalysisStatus('Detecting foot contacts...', 'info');
+  clearAnalysisTable('Detecting foot contacts...');
+  contactChart.clear('Detecting foot contacts...');
+  await new Promise(resolve => requestAnimationFrame(resolve));
+  try {
+    renderAnalysisResult(analyzeGaitCsv(csvText, {
+      variable: ui.analysisAngleSelect.value,
+      contactPolarity: ui.contactPolaritySelect.value,
+      smoothingWindow: ui.analysisSmoothingInput.value,
+      minStepIntervalSec: ui.minStepIntervalInput.value,
+      minProminenceDeg: ui.contactProminenceInput.value,
+      toeOffPolarity: ui.toeOffPolaritySelect.value,
+      minToeOffDelaySec: ui.minToeOffDelayInput.value,
+      maxToeOffFraction: Number(ui.maxToeOffFractionInput.value) / 100,
+      minToeOffProminence: ui.toeOffProminenceInput.value,
+      accelSmoothingWindow: ui.accelSmoothingInput.value
+    }), sourceName);
+  } catch (error) {
+    ui.analysisSummary.replaceChildren();
+    latestAnalysisResult = null;
+    ui.exportAnalysisBtn.disabled = true;
+    clearAnalysisTable(error?.message ?? 'Could not analyze this CSV.');
+    contactChart.clear(error?.message ?? 'Could not analyze this CSV.');
+    setAnalysisStatus(error?.message ?? 'Could not analyze this CSV.', 'error');
+  }
+}
+async function analyzeSelectedCsvFile() { const file = ui.analysisFileInput.files?.[0]; if (!file) { clearAnalysisTable('Choose a saved CSV file first.'); contactChart.clear('Choose a saved CSV file first.'); setAnalysisStatus('Choose a saved CSV file first.', 'error'); return; } try { await analyzeCsvText(await file.text(), file.name); } catch (error) { clearAnalysisTable(error?.message ?? 'Could not read the selected file.'); setAnalysisStatus(error?.message ?? 'Could not read the selected file.', 'error'); } }
+async function analyzeCurrentLog() { const csvText = buildCsv(); if (!csvText) { clearAnalysisTable('No current log rows are available. Start logging first or choose a saved CSV.'); contactChart.clear('No current log rows are available.'); setAnalysisStatus('No current log rows are available.', 'error'); return; } await analyzeCsvText(csvText, 'current unsaved log'); }
+function sanitizedBaseName(name) { const fallback = 'xsens-dot-running-analysis-' + localTimestampForFileName(); const raw = String(name || fallback).replace(/\.[^.]+$/, ''); const sanitized = raw.replace(/[<>:"/\\|?*\x00-\x1F]/g, '_').replace(/\s+/g, '_').replace(/^\.+/, '').slice(0,160); return sanitized || fallback; }
+async function exportAnalysisCsv() { if (!latestAnalysisResult) { setAnalysisStatus('No gait analysis result to save yet.', 'error'); return; } const csvText = summaryToCsv(latestAnalysisResult); const fileName = sanitizedBaseName(latestAnalysisSourceName) + '-gait-cycle-analysis.csv'; if (directoryHandle) { try { const fileHandle = await directoryHandle.getFileHandle(fileName, { create: true }); const writable = await fileHandle.createWritable(); await writable.write(csvText); await writable.close(); setAnalysisStatus('Analysis saved to ' + fileName + '.', 'success'); return; } catch (error) { if (error?.name === 'AbortError') return; showError(error); setAnalysisStatus('Could not write analysis to the selected folder. Downloading instead.', 'error'); } } downloadCsvBlob(csvText, fileName); setAnalysisStatus('Analysis downloaded as ' + fileName + '.', 'success'); }
+function eulerDegToQuat(xDeg, yDeg, zDeg) { const rx = xDeg * Math.PI/180, ry = yDeg * Math.PI/180, rz = zDeg * Math.PI/180; const cx = Math.cos(rx/2), sx = Math.sin(rx/2); const cy = Math.cos(ry/2), sy = Math.sin(ry/2); const cz = Math.cos(rz/2), sz = Math.sin(rz/2); return quatNormalize({ w: cx*cy*cz + sx*sy*sz, x: sx*cy*cz - cx*sy*sz, y: cx*sy*cz + sx*cy*sz, z: cx*cy*sz - sx*sy*cz }); }
+function fakeQuaternionSample(x,y,z, freeAcceleration = null) { const sample = { timestampUs: Math.floor(performance.now()*1000), receivedAtMs: performance.now(), quaternion: eulerDegToQuat(x,y,z), payloadMode: freeAcceleration ? 'complete_quaternion' : 'quaternion' }; if (freeAcceleration) { sample.freeAcceleration = freeAcceleration; sample.freeAccelerationResultant = Math.hypot(freeAcceleration.x, freeAcceleration.y, freeAcceleration.z); } return sample; }
+function fakeBattery(levelPercent, isCharging=false) { return { levelPercent, chargingStatus: isCharging ? 1 : 0, isCharging, receivedAtMs: performance.now() }; }
+function toggleMockStream() { if (mockTimer) { clearInterval(mockTimer); mockTimer = null; mockBatteries = { shank:null, foot:null, hip:null }; mockFreeAccelerations = { shank: null }; ui.mockBtn.textContent = 'Start mock stream'; SEGMENTS.forEach(segment => { setStatus(segment, sensors[segment].connected ? 'Connected' : 'Disconnected', sensors[segment].connected ? 'connected' : 'disconnected'); updateBatteryPanel(segment, { battery: sensors[segment].latestBattery, available: Boolean(sensors[segment].latestBattery) }); }); return; }
+  const startedAt = performance.now(); mockBatteries = { shank: fakeBattery(93), foot: fakeBattery(91), hip: fakeBattery(88) }; SEGMENTS.forEach(segment => { setStatus(segment, 'Mock streaming', 'streaming'); ui[segment].name.textContent = 'Mock ' + segment + ' DOT'; updateBatteryPanel(segment, { battery: mockBatteries[segment], available: true }); }); ui.mockBtn.textContent = 'Stop mock stream'; mockTimer = setInterval(() => { const t = (performance.now()-startedAt)/1000; const shankPitch = 18*Math.sin(t*5.8) + 5*Math.sin(t*1.2); const footPitch = shankPitch + 12*Math.sin(t*5.8 + 0.9) - 8; const shankRoll = 4*Math.sin(t*3.2); const footRoll = shankRoll + 8*Math.sin(t*5.8 + 1.6); const hipPitch = 5*Math.sin(t*2.0) + 2; const hipRoll = 4*Math.sin(t*2.0 + 1.2); const impactPhase = Math.max(0, Math.sin(t*5.8 + 0.2)); const shankImpact = 18 * Math.pow(impactPhase, 18); mockFreeAccelerations.shank = { x: 0.8*Math.sin(t*6.2), y: 1.0*Math.cos(t*5.1), z: shankImpact + 2.5*Math.abs(Math.sin(t*5.8)) }; mockBatteries.shank = fakeBattery(Math.max(0, 93 - Math.floor(t/120))); mockBatteries.foot = fakeBattery(Math.max(0, 91 - Math.floor(t/130))); mockBatteries.hip = fakeBattery(Math.max(0, 88 - Math.floor(t/140))); SEGMENTS.forEach(segment => updateBatteryPanel(segment, { battery: mockBatteries[segment], available: true })); const samples = { shank: fakeQuaternionSample(shankRoll, shankPitch, 0.5*Math.sin(t), mockFreeAccelerations.shank), foot: fakeQuaternionSample(footRoll, footPitch, 1.5*Math.sin(t*2.2), { x: 0, y: 0, z: 0 }), hip: fakeQuaternionSample(hipRoll, hipPitch, 0.4*Math.sin(t*1.4), { x: 0, y: 0, z: 0 }) }; SEGMENTS.forEach(segment => { estimator.update(segment, samples[segment]); updateSensorPanel(segment, samples[segment]); }); updateMetrics('mock'); }, 1000/60); }
+function bindUi() { SEGMENTS.forEach(attachSensorEvents); ui.shank.connect.addEventListener('click', () => connectSegment('shank')); ui.foot.connect.addEventListener('click', () => connectSegment('foot')); ui.hip.connect.addEventListener('click', () => connectSegment('hip')); SEGMENTS.forEach(segment => { ui[segment].start.addEventListener('click', () => startSegment(segment)); ui[segment].stop.addEventListener('click', () => stopSegment(segment)); }); ui.startAllBtn.addEventListener('click', startAll); ui.stopAllBtn.addEventListener('click', stopAll); ui.sagittalAxisSelect.addEventListener('change', () => { estimator.setAxes(ui.sagittalAxisSelect.value, ui.frontalAxisSelect.value); chart.clear(); updateMetrics('axis-change'); }); ui.frontalAxisSelect.addEventListener('change', () => { estimator.setAxes(ui.sagittalAxisSelect.value, ui.frontalAxisSelect.value); chart.clear(); updateMetrics('axis-change'); }); ui.smoothingRange.addEventListener('input', (event) => { estimator.setSmoothingPercent(event.target.value); updateSmoothingLabel(); updateMetrics('smoothing-change'); }); ui.invertDpPf.addEventListener('change', e => { estimator.setInverted('dpPf', e.target.checked); chart.clear(); updateMetrics('invert-change'); }); ui.invertInvEv.addEventListener('change', e => { estimator.setInverted('invEv', e.target.checked); chart.clear(); updateMetrics('invert-change'); }); ui.invertTorsoPitch.addEventListener('change', e => { estimator.setInverted('torsoPitch', e.target.checked); chart.clear(); updateMetrics('invert-change'); }); ui.invertTorsoRoll.addEventListener('change', e => { estimator.setInverted('torsoRoll', e.target.checked); chart.clear(); updateMetrics('invert-change'); }); ui.calibrateBtn.addEventListener('click', () => { estimator.calibrateZero(); chart.clear(); updateMetrics('zero-calibration'); }); ui.resetZeroBtn.addEventListener('click', () => { estimator.resetZero(); chart.clear(); updateMetrics('zero-reset'); }); ui.resetFilterBtn.addEventListener('click', () => { estimator.resetFilterToCurrent(); updateMetrics('filter-reset'); }); ui.fileNameInput.addEventListener('input', updateFolderStatus); ui.chooseFolderBtn.addEventListener('click', chooseFolder); ui.logBtn.addEventListener('click', toggleLogging); ui.downloadBtn.addEventListener('click', saveCsv); ui.mockBtn.addEventListener('click', toggleMockStream); ui.clearBtn.addEventListener('click', () => chart.clear()); ui.analyzeFileBtn.addEventListener('click', analyzeSelectedCsvFile); ui.analyzeCurrentLogBtn.addEventListener('click', analyzeCurrentLog); ui.exportAnalysisBtn.addEventListener('click', exportAnalysisCsv); ui.analysisFileInput.addEventListener('change', () => { const file = ui.analysisFileInput.files?.[0]; if (file) setAnalysisStatus('Selected file: ' + file.name + '.', 'info'); });
+  ui.analysisAngleSelect.addEventListener('change', () => {
+    if (ui.analysisAngleSelect.value === 'foot_quaternion_angular_velocity_deg_s') {
+      ui.contactPolaritySelect.value = 'max';
+      ui.analysisSmoothingInput.value = '7';
+      ui.minStepIntervalInput.value = '0.45';
+      ui.contactProminenceInput.value = '30';
+    } else {
+      ui.contactPolaritySelect.value = 'min';
+      ui.analysisSmoothingInput.value = '9';
+      ui.minStepIntervalInput.value = '0.35';
+      ui.contactProminenceInput.value = '3';
+    }
+  }); }
+ui.fileNameInput.value = defaultCsvName(); ui.smoothingRange.value = String(estimator.smoothingPercent); updateBrowserSupport(); updateSmoothingLabel(); updateFolderStatus(); updateLoggingStatus(); setAnalysisStatus(); contactChart.clear(); SEGMENTS.forEach(segment => updateBatteryPanel(segment)); bindUi(); updateMetrics(); window.__xsensRunningAppReady = true; console.info('Xsens DOT running analysis app with complete-quaternion stream with free acceleration and ankle-angle GCT analysis loaded.');
+    </script>
+  </body>
+</html>

@@ -20,6 +20,16 @@
 
 ## 2. 분석 파이프라인
 
+### 데이터 수집
+
+Movella/Xsens DOT IMU 3개를 Web Bluetooth로 브라우저에 직접 연결해 수집하는 자체 제작 웹앱([`tools/xsens_dot_streaming_app.html`](tools/xsens_dot_streaming_app.html))을 만들어 사용했습니다. 별도 벤더 소프트웨어 없이 Chrome/Edge에서 페어링부터 측정, CSV 저장까지 끝냅니다.
+
+- 각 센서는 쿼터니언 자세 + free acceleration을 담은 BLE payload를 전송. shank-foot 상대 쿼터니언에서 발목 DF/PF·Inv/Ev를, 골반 쿼터니언에서 pitch/roll을 실시간 계산해 화면에 표시
+- 측정 전 피험자를 quiet standing 자세로 세우고 "Calibrate zero"로 영점을 잡음 — 1장 캘리브레이션 사진이 이 단계
+- 화면 표시용으로는 순환 저역통과 스무딩(±180° 경계 점프 방지)을 걸지만, CSV에는 필터 전/후 값을 모두 남겨 오프라인 분석에서 원신호를 그대로 다시 씀
+- "Start CSV logging"으로 BLE 알림이 올 때마다 한 행씩 저장하며 `source_segment`로 어느 센서에서 온 샘플인지 표시 — 가속도 컬럼은 shank 값만 모든 행에 함께 기록되는 구조로, 아래 broadcast 설명과 같은 원인
+- 접촉/이지(toe-off) 탐지, GCT, 케이던스 같은 현장 확인용 미니 분석 기능도 페이지에 내장했지만, 최종 지표·통계는 전부 `analysis/pipeline.py`에서 다시 계산
+
 ```
 data/{피험자}/{피험자}_{조건}.csv
         │  (60Hz, source_segment ∈ {foot, shank, hip})
@@ -117,6 +127,8 @@ python run_analysis.py
 ```
 tetoronome-portfolio/
 ├── assets/                    # README에 직접 삽입되는 그림 (익명화된 결과/파이프라인 그림)
+├── tools/
+│   └── xsens_dot_streaming_app.html  # IMU 3개 BLE 연결·실시간 각도 계산·CSV 로깅용 자체 제작 웹앱
 ├── data/                      # 피험자별 원시 IMU CSV (P01~P06, 60Hz, foot/shank/hip) — 폴더만 유지, 내용은 git에서 제외
 ├── analysis/
 │   ├── pipeline.py            # 지표 계산 (피크 검출, 충격량, 케이던스, 관절/골반 kinematics, 통계)
