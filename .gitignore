@@ -23,3 +23,8 @@ analysis/citation_verification_report.html
 analysis/citation_correction_report.html
 analysis/pipeline_presentation_qna.html
 notebooks/
+
+# --- 작업 메모 ---
+Agent_handoff/
+literature_pack/*.md
+literature_pack/*.csv

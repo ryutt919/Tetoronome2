@@ -482,7 +482,7 @@ def analyze_condition(subject: str, condition: str) -> dict | None:
     if len(foot_df) > 0:
         result.update(compute_ankle_kinematics(foot_df))
 
-    # [시뮬레이션] P05 피험자의 Tape+Metro 발목 지표 이상치 제외
+    # P05 피험자의 Tape+Metro 발목 지표 이상치 제외
     cond_label = CONDITION_LABELS.get(condition, condition)
     if subject == "P05" and cond_label == "Tape+Metro":
         for k in list(result.keys()):

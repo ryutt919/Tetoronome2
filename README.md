@@ -1,6 +1,7 @@
-# Tetoronome — 메트로놈·테이핑 러닝 개입 IMU 분석
+# Tetoronome — 메트로놈/테이핑 러닝 개입 IMU 분석
 
-3개의 IMU(발/정강이/골반)를 신체에 부착하고 러닝 중 **메트로놈(케이던스 유도)** 과 **발목 테이핑** 개입이 충격량, 관절 운동학, 보행 안정성에 미치는 효과를 검증한 N=6 파일럿 연구입니다. 데이터수집 → 원시 IMU CSV → 지표 산출 → 통계 검정 → 시각화까지 전체 분석 파이프라인을 Python으로 직접 구현했습니다.
+- 러닝 중 **메트로놈(케이던스 유도)** 과 **발목 테이핑**이 충격량, 관절 운동학, 보행 안정성에 미치는 효과를 IMU 3개(발/정강이/골반)로 측정한 N=6 파일럿 연구임.
+- 데이터 수집 웹앱부터 지표 산출, 통계 검정, 시각화까지 분석 파이프라인을 Python으로 직접 구현함.
 
 ## 1. 연구 설계
 
@@ -10,27 +11,25 @@
 | 조건 (Within-subject) | Control / Metro / Tape / Tape+Metro (피험자별 무작위 순서) |
 | 센서 | Xsens 계열 IMU 3개 — `foot`(발), `shank`(정강이), `hip`(골반), 공통 샘플링레이트 60Hz |
 | 측정 항목 | shank 3축 자유가속도(+resultant), 각 부위 quaternion 기반 자세각 |
-| 개입 가설 | 메트로놈: 충격량↓ · 골반 안정성↑ · 보폭 일관성↑ [1] / 테이핑: 충격량↓ · 족저굴곡↑ · 보폭 일관성↑ [2][3] |
+| 개입 가설 | 메트로놈: 충격량↓, 골반 안정성↑, 보폭 일관성↑ [1] / 테이핑: 충격량↓, 족저굴곡↑, 보폭 일관성↑ [2][3] |
 
 | 그림 | 설명 |
 |---|---|
 | ![실험 설계](보고용%20figure/실험%20설계%201.png) | 웜업 3분 → 점진적 강도 증가 → RPE 기준 cadence 측정 → 2분 러닝 블록, 조건 간 충분한 휴식을 두고 4개 조건을 무작위 순서로 진행 |
-| ![IMU 부착](보고용%20figure/IMU%20부착.png) | IMU 3개를 골반(pelvis)·정강이(shank)·발(foot)에 벨트/테이프로 고정 부착 |
+| ![IMU 부착](보고용%20figure/IMU%20부착.png) | IMU 3개를 골반(pelvis), 정강이(shank), 발(foot)에 벨트/테이프로 고정 부착 |
 | ![테이핑 예시](보고용%20figure/테이핑%20예시.png) | 발목 테이핑 개입 조건의 실제 시술 예시 (발목 안정화 패턴) |
 
 ## 2. 분석 파이프라인
 
 ### 데이터 수집
 
-Xsens DOT IMU 3개를 Web Bluetooth로 브라우저에서 직접 스트리밍하는 웹앱([`tools/xsens_dot_streaming_app.html`](tools/xsens_dot_streaming_app.html))으로 수집. 별도 프로그램 설치 없이 Chrome/Edge에서 페어링·측정·CSV 저장을 한 페이지에서 처리.
-
-- 각 센서는 "Complete Quaternion" payload로 자세(quaternion w/x/y/z)와 free acceleration(x/y/z)을 BLE 알림마다 전송
-- 발목각은 foot·shank 쿼터니언의 상대 회전(`conjugate(shank) × foot`)을 axis-angle(rotation vector)로 변환해 계산하고, 골반각은 hip 쿼터니언을 같은 방식으로 바로 변환. 오일러각 대신 쿼터니언 상대 회전을 쓴 이유는 축 순서에 따라 값이 달라지는 오일러각의 짐벌락·표현 모호성을 피하기 위함
-- IMU가 내놓는 쿼터니언은 센서 전원이 켜질 때의 절대 좌표계 기준이라 그 자체로는 해부학적 의미가 없음. 측정 직전 피험자를 quiet standing 자세로 세우고 "Calibrate zero"로 그 시점 쿼터니언을 기준값으로 저장한 뒤 이후 값에서 빼서, 중립 자세를 0°로 맞춤 — 1장 캘리브레이션 사진이 이 단계
-- 화면에는 순환 저역통과 필터(smoothing % 조절 가능)를 걸어 표시. 일반 저역통과는 각도가 ±180°를 넘나들 때 이를 큰 점프로 오판하므로, 두 각도 차를 항상 -180~180° 범위로 감싸는 circular diff를 필터 안에 넣어 이 문제를 막음
-- 화면용 스무딩은 실시간 가독성이 목적이라 CSV에는 raw / unfiltered / filtered 값을 모두 남기고, 실제 분석은 `analysis/pipeline.py`의 4차 Butterworth 15Hz(zero-phase)로 오프라인에서 다시 필터링
-- BLE 알림이 올 때마다 한 행씩 저장하며 `source_segment`로 어느 센서 샘플인지 표시. 가속도 컬럼은 매 행에 shank의 최신값을 함께 적는데, foot/hip row에도 `shank_free_acceleration_*` 값이 그대로 나타나는 게 이 때문 (4장 broadcast 설명 참고)
-- 접촉·이지(toe-off) 시점을 국소 극값으로 잡아 GCT·케이던스를 즉석에서 보여주는 기능도 페이지에 있음. 현장에서 센서 부착 상태를 바로 확인하는 용도이고, 실제 통계에 쓴 수치는 전부 오프라인 파이프라인에서 다시 계산
+- Xsens DOT IMU 3개를 Web Bluetooth로 브라우저에 직접 스트리밍하는 웹앱([`tools/xsens_dot_streaming_app.html`](tools/xsens_dot_streaming_app.html))을 만들어 수집함. 별도 프로그램 설치 없이 Chrome/Edge에서 페어링, 측정, CSV 저장까지 처리함.
+- 각 센서는 자세(quaternion w/x/y/z)와 free acceleration(x/y/z)을 BLE 알림마다 전송함.
+- 발목각은 foot/shank 쿼터니언의 상대 회전(`conjugate(shank) × foot`)을 axis-angle로 변환해 계산하고, 골반각은 hip 쿼터니언을 같은 방식으로 변환함. 오일러각의 짐벌락과 축 순서 문제를 피하려고 쿼터니언을 그대로 사용함.
+- 측정 직전 quiet standing 자세의 쿼터니언을 기준으로 저장하고, 이후 값을 이 기준에 대한 상대 회전으로 계산해 중립 자세를 0°로 맞춤.
+- 화면 표시에는 ±180° 경계에서 값이 튀지 않도록 각도 차를 -180~180°로 감싸는 circular 저역통과 필터를 사용함. CSV에는 raw, unfiltered, filtered 값을 모두 저장하고, 분석 단계에서 4차 Butterworth 15Hz(zero-phase)로 다시 필터링함.
+- 가속도는 shank IMU에서만 측정했으며, foot/hip 행의 가속도 값은 가장 가까운 시각의 shank 값임.
+- 현장에서 부착 상태를 확인할 수 있도록 GCT와 케이던스를 실시간으로 표시함. 통계에는 오프라인 분석 결과만 사용함.
 
 ```
 data/{피험자}/{피험자}_{조건}.csv
@@ -62,15 +61,15 @@ pip install numpy pandas scipy matplotlib seaborn
 python run_analysis.py
 ```
 
-### 신호 처리 로직 (핵심 설계 결정)
+### 신호 처리 로직
 
 | 처리 | 방법 | 근거 |
 |---|---|---|
-| 저역통과 필터 | 4차 Butterworth, cutoff 15Hz | 보행 신호 주성분은 보존하면서 STA(soft tissue artifact)·부착 노이즈 억제 — 단, 저역통과 필터만으로는 착지 충격 시 발생하는 STA를 완전히 제거하지 못한다는 한계가 있음 [4] |
+| 저역통과 필터 | 4차 Butterworth, cutoff 15Hz | 보행 신호 주성분은 보존하면서 STA(soft tissue artifact), 부착 노이즈 억제 — 단, 저역통과 필터만으로는 착지 충격 시 발생하는 STA를 완전히 제거하지 못한다는 한계가 있음 [4] |
 | 충격 피크 검출 | `scipy.find_peaks`, 고정 prominence 0.2g, 최소 간격 280ms | 개인별 절대 충격량 차이를 흡수하기 위해 height 대신 prominence 사용, 280ms로 이중 피크(double peak) 방지 |
-| 이상치 제거 | Tukey IQR (1.5×IQR) | 피크 높이·관절각 최대치 모두에 적용해 센서 튐값 제거 |
+| 이상치 제거 | Tukey IQR (1.5×IQR) | 피크 높이, 관절각 최대치 모두에 적용해 센서 튐값 제거 |
 | 케이던스 | 수기 기록값으로 최종 대체 | 실험 중 실측한 케이던스를 정답값으로 사용 |
-| 통계 검정 | Wilcoxon signed-rank (양측) 강제 적용 + Cohen's d 병기 | N=6 소표본이라 정규성을 가정한 t-test 대신 비모수 검정을 채택, 유의성 하나에 의존하지 않도록 효과크기를 함께 보고 |
+| 통계 검정 | Wilcoxon signed-rank (양측) + Cohen's d | N=6이라 정규성 가정이 어려워 비모수 검정 사용. 양측 최소 p값이 0.031이므로 효과크기, 변화율, 개인별 추이를 함께 확인 |
 
 | 그림 | 설명 |
 |---|---|
@@ -89,7 +88,8 @@ python run_analysis.py
 | 테이핑 | 족저굴곡 ↑ | Plantarflexion +5.8% (n.s.) | ✅ 방향 일치 |
 | 테이핑 | 보폭 일관성 ↑ | Step CV% −10.2% (n.s.) | ✅ 방향 일치 |
 
-유의미한(p<0.05) 결과는 두 건뿐입니다 — **Control→Tape+Metro 케이던스 증가**, **Tape→Tape+Metro Step CV% 증가** (둘 다 p=.031, N=6 양측 Wilcoxon에서 나올 수 있는 최소 p값).
+- p<0.05 결과는 **Control→Tape+Metro 케이던스 증가**와 **Tape→Tape+Metro Step CV% 증가** 두 건뿐임.
+- 두 건 모두 p=.031로, N=6 양측 Wilcoxon에서 나올 수 있는 최소 p값임.
 
 | 그림 | 설명 |
 |---|---|
@@ -101,49 +101,53 @@ python run_analysis.py
 
 **해석**
 
-- 메트로놈 효과가 없었다기보다, IMU 기반 shock proxy가 실제 지면반력과 다르게 반응한 결과에 가까움. Force-plate 연구에서는 cadence를 5~10% 올리면 step length·braking impulse·impact transient가 줄어든다고 보고하지만 [1], 본 연구의 shank 가속도는 반대로 상승.
-- 가능한 설명: cadence 증가 시 medial gastrocnemius 활성 증가 [5], peak ankle dorsiflexion 감소 [6], 착지 시 발목이 더 plantarflexed된 자세를 취한다는 보고 [7] — 지면 충격 자체보다 발목·종아리 근육의 반응 변화를 가속도계가 함께 잡아냈을 가능성.
-- 메트로놈 조건에서 Step CV%가 악화된 것도 같은 맥락: 메트로놈은 걸음 간격 변동계수를 실제로 줄이지 못하고 [8], 고령자 보행에서도 stride time 변동성을 오히려 늘린다는 보고가 있으며 [9], 걷기보다 러닝에서 박자 동기화가 덜 이뤄지고 [10], 외부 박자를 따라가려는 시도가 과잉보정(overcorrection)에 의한 진동("anti-persistent" 패턴)을 만든다는 설명도 있음 [11]. 케이던스는 끌어올렸지만(유의미한 결과) 보폭을 더 일정하게 만드는 방향으로는 작동하지 않은 셈.
-- 테이핑 조건의 족저굴곡·보폭 일관성 개선 방향은 발목 키네시오 테이핑이 peak torque·power와 고유수용성 감각을 함께 향상시킨다는 보고들과 일치 [12][13].
-- IMU 가속도는 지면반력의 근사치(proxy)이지 직접 측정값은 아님 — 이번 분석에서 가장 크게 확인된 지점.
+- 메트로놈 조건의 충격량 증가는 IMU 기반 shock proxy가 실제 지면반력과 다르게 반응한 결과에 가까움. Force-plate 연구에서는 cadence를 5~10% 올리면 step length, braking impulse, impact transient가 줄어든다고 보고했으나 [1], 본 연구의 shank 가속도는 반대로 상승함.
+- cadence 증가 시 medial gastrocnemius 활성 증가 [5], peak ankle dorsiflexion 감소 [6], 착지 시 더 plantarflexed된 발목 자세 [7]가 보고됨. 가속도계가 지면 충격보다 발목/종아리 근육의 반응 변화를 함께 반영했을 가능성이 있음.
+- 메트로놈 조건의 Step CV% 증가도 같은 맥락임. 메트로놈은 걸음 간격 변동계수를 줄이지 못하고 [8], 고령자 보행에서는 stride time 변동성을 오히려 늘린다는 보고가 있음 [9].
+- 러닝은 걷기보다 박자 동기화가 덜 이뤄지고 [10], 외부 박자를 따라가려는 과잉보정(overcorrection)이 anti-persistent 패턴을 만든다는 설명도 있음 [11]. 메트로놈은 케이던스를 유의하게 올렸지만 보폭 일관성은 개선하지 못함.
+- 테이핑 조건의 족저굴곡, 보폭 일관성 개선 방향은 발목 키네시오 테이핑이 peak torque/power와 고유수용성 감각을 향상시킨다는 보고와 일치함 [12][13].
+- IMU 가속도는 지면반력의 근사치(proxy)이며 직접 측정값이 아님. 이번 분석에서 가장 크게 확인된 점임.
 
 ## 4. 문제와 해결
 
-- **이중 피크(double-counting) 문제** — 정강이 가속도 신호에 착지 충격 뒤 잔진동이 남아 `find_peaks`가 한 걸음을 두 걸음으로 셈. → 15Hz Butterworth로 스무딩하고, height 대신 **고정 prominence(0.2g)** + **최소 간격 280ms**를 함께 걸어 해결 (개인마다 절대 충격량이 달라 height 기준은 오탐이 많았음).
+- **이중 피크**
+  - 착지 충격 뒤 잔진동 때문에 한 걸음이 두 걸음으로 검출됨.
+  - 15Hz Butterworth 스무딩 후 height 대신 prominence(0.2g)와 최소 간격 280ms로 검출함. 피험자마다 절대 충격량이 달라 height 기준은 오탐이 많았음.
 
-- **단일 IMU로 양발 케이던스를 못 잡는 문제** — 편측(unilateral) 센서라 자동 검출 케이던스가 실측치와 어긋남. → 실험 중 스톱워치로 직접 잰 케이던스를 확보해 자동 검출값을 대체하는 수동 보정 테이블(`MANUAL_CADENCE`)을 파이프라인에 내장. 자동 검출은 걸음 간격 기반 지표(CV%, 보폭 일관성)에만 사용.
+- **편측 IMU로 케이던스 검출 불가**
+  - 한쪽 다리에만 센서가 있어 자동 검출 케이던스가 실측과 맞지 않음.
+  - 실험 중 직접 측정한 케이던스로 대체하고, 자동 검출 피크는 걸음 간격 CV% 계산에만 사용함.
 
-- **피험자 1명의 이상치(outlier) 조건** — 한 피험자의 Tape+Metro 조건에서 발목 각도가 다른 조건·피험자 대비 물리적으로 설명되지 않는 값으로 튐(센서 미세 이탈 가능성). → 해당 셀만 결측 처리하고 그 사실을 코드 주석에 명시(조용히 평균에 섞지 않음).
+- **발목 각도 이상치**
+  - P05의 Tape+Metro 조건에서 발목 각도가 다른 조건/피험자와 비교해 설명되지 않는 값으로 튐. 센서 이탈로 추정함.
+  - 해당 조건의 발목 지표만 분석에서 제외함.
 
-- **공유 컬럼을 서로 다른 센서처럼 오독할 위험** — CSV의 `shank_free_acceleration_*` 컬럼은 shank IMU 하나에서만 측정되고 foot/hip row에는 가장 가까운 시각의 값이 그대로 복사(broadcast)됨. 이를 모르고 보면 "발·무릎·골반 3곳의 독립적인 충격 측정"처럼 보일 수 있음. → `pipeline.py` 상단에 이 broadcast 구조를 명시하고, "같은 shank 신호를 서로 다른 시점에서 읽은 것"으로 해석 범위를 한정.
+## 5. 한계
 
-- **소표본(N=6) 통계에서 유의성에 매몰될 위험** — 양측 Wilcoxon 최소 p값이 0.031이라 6명 전원이 같은 방향으로 반응해야만 유의해짐. → p-value 단독 보고를 지양하고 **Cohen's d, 변화율(%), 개인별 스파게티 플롯**을 항상 함께 제시해 "유의하지 않음 = 효과 없음"으로 오독되지 않게 구성.
+- 골반 IMU에서 예상과 다른 값이 많이 나옴. 이후 밴드를 IMU 위로 덮어 고정하면 샘플링레이트가 약 50% 떨어지고 튐값과 결측이 더 자주 생긴다는 것을 발견함.
+- 연부조직 진동(STA)은 저역통과 필터로 완전히 제거되지 않음 [4].
+- 트레드밀 금속 프레임의 자기장 왜곡과 달리기 충격이 겹치면 자세 추정에서 Roll/Yaw 오차와 자이로 드리프트가 누적될 수 있음 [14][15][16].
 
-- **초안 리포트의 인용 과대해석(overclaim)** — 초기 결과 해석 초안에서 일부 인용(Collins 2009, Thaut 1993 등)이 실제로는 뒷받침하지 않는 주장(러닝 시 족저굴곡 증가, push-off 강화 등)에 붙어 있었음. → 원문을 재확인하는 별도 인용 감사 절차를 만들어 과대해석 항목을 전부 식별하고, 검증되지 않은 문장은 제거하거나 더 약한 표현으로 다운시프트. 2차 독립 재검증까지 거쳐 수정 전/후를 대조 기록.
-  - 원칙: **원문을 직접 확인하지 못한 인용은 사실로 서술하지 않는다.** 링크만 확보되고 원문 대조가 안 된 자료는 `literature_pack/99_link_only/`에 따로 분리.
-
-- **IMU 측정 자체의 구조적 한계** — soft tissue artifact(연부조직 진동)는 저역통과 필터만으로 완전히 제거되지 않고 일시적이지만 상당한 측정 오차를 남길 수 있으며 [4], 트레드밀 금속 프레임에 의한 자기장 왜곡과 달리기 충격에 의한 가속도계 신호 오염이 동시에 발생하면 자세추정 알고리즘의 자이로 의존도가 높아져 Roll/Yaw 추정 오차와 자이로 적분 드리프트가 누적될 수 있음 [14][15][16]. 오차원별로 영향받는 지표가 다름. → 어떤 지표가 어떤 오차원에 취약한지 구분해, 가설-결과 불일치를 "메트로놈이 실패했다"가 아니라 "측정 한계 vs 실제 개입 효과"로 나눠 해석하도록 함 (3장 해석 참고).
-
-## 5. 폴더 구조
+## 6. 폴더 구조
 
 ```
 tetoronome-portfolio/
 ├── assets/                    # README에 직접 삽입되는 그림 (익명화된 결과/파이프라인 그림)
 ├── tools/
-│   └── xsens_dot_streaming_app.html  # IMU 3개 BLE 연결·실시간 각도 계산·CSV 로깅용 자체 제작 웹앱
+│   └── xsens_dot_streaming_app.html  # IMU 3개 BLE 연결, 실시간 각도 계산, CSV 로깅용 자체 제작 웹앱
 ├── data/                      # 피험자별 원시 IMU CSV (P01~P06, 60Hz, foot/shank/hip) — 폴더만 유지, 내용은 git에서 제외
 ├── analysis/
 │   ├── pipeline.py            # 지표 계산 (피크 검출, 충격량, 케이던스, 관절/골반 kinematics, 통계)
 │   ├── run_analysis.py        # 전체 파이프라인 실행 진입점
 │   ├── visualize.py           # results/figures/ 생성
 │   └── add_table.py, plot_change_rates.py
-├── literature_pack/            # 결과 해석을 뒷받침/반박하는 문헌 감사 자료 (인용 검증 기록 포함)
+├── literature_pack/            # 결과 해석에 사용한 참고문헌 자료
 ├── results/                    # metrics_by_condition.csv 등 + figures/ — 폴더만 유지, 내용은 git에서 제외 (run_analysis.py로 재생성)
-├── 보고용 figure/               # 실험설계·부착·테이핑 사진 및 최종 보고서 PDF/DOCX
-└── Research_object.md, Agent_handoff/01_analysis.md   # 가설 정의 및 작업 이력
+├── 보고용 figure/               # 실험설계, 부착, 테이핑 사진 및 최종 보고서 PDF/DOCX
+└── Research_object.md         # 가설 정의
 ```
 
-## 6. 참고문헌
+## 7. 참고문헌
 
 1. Heiderscheit, B. C., Chumanov, E. S., Michalski, M. P., Wille, C. M., & Ryan, M. B. (2011). Effects of step rate manipulation on joint mechanics during running. *Medicine & Science in Sports & Exercise*, 43(2), 296–302. https://doi.org/10.1249/MSS.0b013e3181ebedf4
 2. Bartík, P., & Šagát, P. (2022). Positive effect of kinesiotape on 1 km run performance in university-level males: A cross-sectional study. *Journal of Functional Morphology and Kinesiology*, 7(2), 32. https://doi.org/10.3390/jfmk7020032
